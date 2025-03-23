@@ -1,3 +1,53 @@
+# HAYAL DÜNYAM: YAPAY ZEKA DESTEKLİ OKUL ÖNCESİ HİKAYE OLUŞTURMA PLATFORMU
+
+## Proje Hakkında
+
+"Hayal Dünyam" projesi okul öncesi dönem çocuklarının (3-7 yaş) yaratıcılıklarını ve hayal güçlerini geliştirmeyi amaçlayan, yapay zeka destekli interaktif bir hikaye oluşturma platformudur. Proje günümüz çocuklarının dijital dünyada pasif tüketici olmak yerine, aktif içerik üretici olmalarını desteklemek amacıyla ortaya çıkmıştır.
+
+### Öne Çıkan Özellikler 🌟
+
+- **Yapay Zeka Destekli Çizim Analizi**: Çocukların çizimlerini otomatik olarak analiz ederek karakterlere dönüştürme
+- **Sesli Hikaye Oluşturma**: Çocukların kendi seslerini kaydederek hikayelerini seslendirebilme
+- **Ebeveyn Kontrol Paneli**: Çocukların gelişimini takip edebilme ve içerik kontrolü
+- **Güvenli Kullanım**: Çocuklar için özel tasarlanmış güvenli ve reklamsız ortam
+- **Eğitici İçerik**: Yaş gruplarına özel eğitici ve eğlenceli aktiviteler
+- **Çevrimdışı Çalışabilme**: İnternet bağlantısı olmadan da kullanılabilme özelliği
+
+### Hedef Kitle 👥
+
+#### Çocuklar (3-7 yaş)
+
+- Yaratıcılığını geliştirmek isteyen
+- Hikaye anlatmayı seven
+- Resim çizmeyi seven
+- Teknoloji ile tanışma aşamasında olan
+
+#### Ebeveynler
+
+- Çocuklarının yaratıcılığını desteklemek isteyen
+- Güvenli dijital içerik arayan
+- Çocuklarının gelişimini takip etmek isteyen
+- Teknoloji kullanımını kontrol etmek isteyen
+
+#### Eğitimciler
+
+- Okul öncesi eğitimde teknoloji kullanmak isteyen
+- Öğrencilerin yaratıcılığını geliştirmek isteyen
+- İnteraktif öğrenme araçları arayan
+
+### Problem Tanımı
+
+- Çocukların yaratıcılıklarını dijital ortamda ifade edebilecekleri platformların sınırlı olması
+- Mevcut uygulamaların çoğunun hazır şablonlar sunması ve çocukların özgün üretimlerini kısıtlaması
+- Ebeveynlerin çocuklarının gelişimini takip edebilecekleri interaktif platformların azlığı
+
+### Projenin Amacı
+
+- Çocukların kendi çizdikleri karakterlerle hikayeler oluşturabilmesi
+- Yapay zeka desteğiyle çizimlerin analiz edilip hikayeye dönüştürülmesi
+- Çocukların kendi seslerini kaydederek hikayelerini seslendirebilmesi
+- Ebeveynlerin çocuklarının gelişimini takip edebilmesi
+
 ## Haftalık İlerleme
 
 ### 1. Hafta ✅
@@ -31,9 +81,27 @@
 
 ## Teknolojiler
 
+### Frontend Teknolojileri
+
 - React Native
 - Expo
-- Firebase (Authentication, Realtime Database, Storage)
-- TypeScript
 - React Navigation
 - Expo Linear Gradient
+- TypeScript
+
+### Backend Teknolojileri
+
+- Firebase
+  - Authentication
+  - Realtime Database
+  - Storage
+  - Cloud Functions
+  - Hosting
+  - Performance Monitoring
+  - Analytics
+  - Cloud Messaging
+
+### Yapay Zeka ve Veri İşleme
+
+- TensorFlow.js
+- Web Speech API
