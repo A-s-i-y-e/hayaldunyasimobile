@@ -70,6 +70,13 @@
 - Giriş ve kayıt ekranları tasarlandı
 - Firebase Authentication entegrasyonu başlatıldı
 
+### 4. Hafta ✅
+
+- Firebase Authentication entegrasyonu tamamlandı
+- Login ve Register ekranları tamamlandı
+- AuthContext ile kullanıcı durumu yönetimi eklendi
+- Navigasyon yapısı düzenlendi
+
 ### Yapılacaklar 🚀
 
 - Çizim sistemi geliştirme
