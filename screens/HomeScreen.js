@@ -4,125 +4,146 @@ import {
   Text,
   View,
   TouchableOpacity,
-  ImageBackground,
   ScrollView,
+  Image,
+  Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import { auth } from "../config/firebase";
 import { signOut } from "firebase/auth";
-import { useAuth } from "../contexts/AuthContext";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+
+const { width } = Dimensions.get("window");
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const { user } = useAuth();
 
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      navigation.navigate("Login");
+      navigation.replace("Login");
     } catch (error) {
       console.error("Çıkış yapılırken hata oluştu:", error);
     }
   };
 
+  const menuItems = [
+    {
+      title: "Çizim Yap",
+      icon: "pencil",
+      color: "#4CAF50",
+      screen: "Draw",
+      description: "Hayallerini çizime dök",
+      image: "https://cdn-icons-png.flaticon.com/512/1995/1995574.png",
+    },
+    {
+      title: "Hikayeler",
+      icon: "book-open-variant",
+      color: "#66BB6A",
+      screen: "Stories",
+      description: "Büyülü hikayeler oku",
+      image: "https://cdn-icons-png.flaticon.com/512/1995/1995575.png",
+    },
+    {
+      title: "Oyunlar",
+      icon: "gamepad-variant",
+      color: "#81C784",
+      screen: "Games",
+      description: "Eğlenceli oyunlar oyna",
+      image: "https://cdn-icons-png.flaticon.com/512/1995/1995576.png",
+    },
+    {
+      title: "Profilim",
+      icon: "account",
+      color: "#A5D6A7",
+      screen: "Profile",
+      description: "Profilini düzenle",
+      image: "https://cdn-icons-png.flaticon.com/512/1995/1995577.png",
+    },
+  ];
+
   return (
     <LinearGradient colors={["#2E7D32", "#1B5E20"]} style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Hayal Dünyası</Text>
-        {user && (
+        <View style={styles.headerContent}>
+          <View style={styles.logoContainer}>
+            <MaterialCommunityIcons name="tree" size={40} color="#fff" />
+          </View>
           <TouchableOpacity
             onPress={handleSignOut}
             style={styles.signOutButton}
           >
-            <Text style={styles.signOutText}>Çıkış Yap</Text>
+            <MaterialCommunityIcons name="logout" size={24} color="#fff" />
           </TouchableOpacity>
-        )}
+        </View>
       </View>
 
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.mainContent}>
-          <Text style={styles.mainTitle}>✨ Hayal Dünyasına Hoş Geldiniz</Text>
-          <Text style={styles.subTitle}>
-            Hayallerinizin büyülü ormanında maceraya hazır mısınız? 🌿
+      <ScrollView style={styles.content}>
+        <View style={styles.welcomeSection}>
+          <Text style={styles.welcomeText}>🌳 Masal Ormanı</Text>
+          <Text style={styles.subtitleText}>
+            Büyülü ormanın kapıları açılıyor...
           </Text>
+        </View>
 
-          {!user ? (
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.primaryButton]}
-                activeOpacity={0.8}
-                onPress={() => navigation.navigate("Login")}
-              >
-                <Text style={styles.buttonText}>🌟 Giriş Yap</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.secondaryButton]}
-                activeOpacity={0.8}
-                onPress={() => navigation.navigate("Register")}
-              >
-                <Text style={styles.buttonText}>🌱 Kayıt Ol</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.primaryButton]}
-                activeOpacity={0.8}
-                onPress={() => navigation.navigate("Draw")}
-              >
-                <Text style={styles.buttonText}>🎨 Çizim Yap</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.secondaryButton]}
-                activeOpacity={0.8}
-                onPress={() => navigation.navigate("Stories")}
-              >
-                <Text style={styles.buttonText}>📖 Hikayeler</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <View style={styles.cardContainer}>
+        <View style={styles.menuGrid}>
+          {menuItems.map((item, index) => (
             <TouchableOpacity
-              style={styles.card}
-              onPress={() => navigation.navigate("Draw")}
+              key={index}
+              style={[styles.menuItem, { backgroundColor: item.color }]}
+              onPress={() => navigation.navigate(item.screen)}
             >
-              <View style={styles.cardIconContainer}>
-                <Text style={styles.cardIcon}>🎨</Text>
+              <View style={styles.menuItemContent}>
+                <Image source={{ uri: item.image }} style={styles.menuImage} />
+                <Text style={styles.menuText}>{item.title}</Text>
+                <Text style={styles.menuDescription}>{item.description}</Text>
               </View>
-              <Text style={styles.cardTitle}>Çizim Yap</Text>
-              <Text style={styles.cardDescription}>
-                Hayallerinizi çizime dökün
-              </Text>
             </TouchableOpacity>
+          ))}
+        </View>
 
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => navigation.navigate("Stories")}
-            >
-              <View style={styles.cardIconContainer}>
-                <Text style={styles.cardIcon}>📖</Text>
+        <View style={styles.featuredSection}>
+          <Text style={styles.sectionTitle}>Ormanın Sırları</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.featuredScroll}
+          >
+            {[
+              {
+                title: "Peri Bahçesi",
+                description: "Renkli çiçekler ve büyülü yaratıklar",
+                image:
+                  "https://cdn-icons-png.flaticon.com/512/1995/1995581.png",
+              },
+              {
+                title: "Elf Köyü",
+                description: "Küçük evler ve dost canlısı elfler",
+                image:
+                  "https://cdn-icons-png.flaticon.com/512/1995/1995582.png",
+              },
+              {
+                title: "Büyücü Kulesi",
+                description: "Sihirli kitaplar ve gizemli formüller",
+                image:
+                  "https://cdn-icons-png.flaticon.com/512/1995/1995583.png",
+              },
+            ].map((item, index) => (
+              <View key={index} style={styles.featuredCard}>
+                <View style={styles.featuredImageContainer}>
+                  <Image
+                    source={{ uri: item.image }}
+                    style={styles.featuredImage}
+                  />
+                </View>
+                <Text style={styles.featuredTitle}>{item.title}</Text>
+                <Text style={styles.featuredDescription}>
+                  {item.description}
+                </Text>
               </View>
-              <Text style={styles.cardTitle}>Hikayeler</Text>
-              <Text style={styles.cardDescription}>
-                Büyülü hikayeler oluşturun
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => navigation.navigate("Games")}
-            >
-              <View style={styles.cardIconContainer}>
-                <Text style={styles.cardIcon}>🎮</Text>
-              </View>
-              <Text style={styles.cardTitle}>Oyunlar</Text>
-              <Text style={styles.cardDescription}>
-                Eğlenceli oyunlar oynayın
-              </Text>
-            </TouchableOpacity>
-          </View>
+            ))}
+          </ScrollView>
         </View>
       </ScrollView>
     </LinearGradient>
@@ -134,110 +155,138 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    backgroundColor: "rgba(0,0,0,0.1)",
+  },
+  headerContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
-    paddingTop: 40,
-    backgroundColor: "rgba(0,0,0,0.1)",
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#fff",
+  logoContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   signOutButton: {
     padding: 8,
   },
-  signOutText: {
-    color: "#fff",
-    fontSize: 16,
-  },
-  scrollView: {
+  content: {
     flex: 1,
   },
-  mainContent: {
-    flex: 1,
+  welcomeSection: {
+    padding: 20,
     alignItems: "center",
-    paddingTop: 40,
   },
-  mainTitle: {
+  welcomeText: {
     fontSize: 32,
     fontWeight: "bold",
     color: "#fff",
-    textAlign: "center",
     marginBottom: 10,
     textShadowColor: "rgba(0,0,0,0.3)",
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 5,
   },
-  subTitle: {
-    fontSize: 18,
+  subtitleText: {
+    fontSize: 16,
     color: "#E8F5E9",
     textAlign: "center",
-    marginBottom: 30,
     textShadowColor: "rgba(0,0,0,0.2)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
-  buttonContainer: {
+  menuGrid: {
     flexDirection: "row",
-    gap: 20,
-    marginBottom: 40,
+    flexWrap: "wrap",
+    padding: 10,
+    justifyContent: "space-between",
   },
-  button: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 25,
-    elevation: 3,
-  },
-  primaryButton: {
-    backgroundColor: "#4CAF50",
-  },
-  secondaryButton: {
-    backgroundColor: "#66BB6A",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  cardContainer: {
-    flexDirection: "row",
-    gap: 20,
-    padding: 20,
-  },
-  card: {
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    padding: 20,
-    borderRadius: 15,
-    alignItems: "center",
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  cardIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(255,255,255,0.2)",
+  menuItem: {
+    width: (width - 40) / 2,
+    aspectRatio: 1,
+    margin: 5,
+    borderRadius: 20,
+    padding: 15,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 10,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    backgroundColor: "rgba(255,255,255,0.9)",
   },
-  cardIcon: {
-    fontSize: 32,
+  menuItemContent: {
+    alignItems: "center",
   },
-  cardTitle: {
-    fontSize: 18,
+  menuImage: {
+    width: 60,
+    height: 60,
+    marginBottom: 8,
+  },
+  menuText: {
+    color: "#333",
+    fontSize: 14,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 3,
+  },
+  menuDescription: {
+    color: "#666",
+    fontSize: 11,
+    textAlign: "center",
+  },
+  featuredSection: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
     fontWeight: "bold",
     color: "#fff",
-    marginBottom: 8,
-    textAlign: "center",
+    marginBottom: 15,
+    textShadowColor: "rgba(0,0,0,0.2)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
-  cardDescription: {
+  featuredScroll: {
+    flexDirection: "row",
+  },
+  featuredCard: {
+    width: width * 0.7,
+    marginRight: 15,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderRadius: 20,
+    padding: 15,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  featuredImageContainer: {
+    width: "100%",
+    height: 120,
+    borderRadius: 10,
+    overflow: "hidden",
+    marginBottom: 8,
+  },
+  featuredImage: {
+    width: "100%",
+    height: "100%",
+  },
+  featuredTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 5,
+  },
+  featuredDescription: {
     fontSize: 14,
-    color: "#E8F5E9",
-    textAlign: "center",
+    color: "#666",
   },
 });
