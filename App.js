@@ -5,6 +5,7 @@ import {
   View,
   TouchableOpacity,
   ImageBackground,
+  ActivityIndicator,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
@@ -15,24 +16,60 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "./screens/HomeScreen";
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
+import DrawScreen from "./screens/DrawScreen";
+import StoriesScreen from "./screens/StoriesScreen";
+import ProfileScreen from "./screens/ProfileScreen";
+import GamesScreen from "./screens/GamesScreen";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
 const Stack = createNativeStackNavigator();
 
+function Navigation() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
+    );
+  }
+
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animation: "slide_from_right",
+      }}
+    >
+      {user ? (
+        // Kullanıcı giriş yapmışsa
+        <>
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Draw" component={DrawScreen} />
+          <Stack.Screen name="Stories" component={StoriesScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="Games" component={GamesScreen} />
+        </>
+      ) : (
+        // Kullanıcı giriş yapmamışsa
+        <>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+        </>
+      )}
+    </Stack.Navigator>
+  );
+}
+
 export default function App() {
   return (
-    <NavigationContainer>
-      <StatusBar style="light" />
-      <Stack.Navigator
-        screenOptions={{
-          headerShown: false,
-          animation: "slide_from_right",
-        }}
-      >
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <AuthProvider>
+      <NavigationContainer>
+        <StatusBar style="light" />
+        <Navigation />
+      </NavigationContainer>
+    </AuthProvider>
   );
 }
 
@@ -148,5 +185,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#E8F5E9",
     textAlign: "center",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#1B5E20",
   },
 });

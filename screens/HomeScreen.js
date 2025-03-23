@@ -4,114 +4,134 @@ import {
   Text,
   View,
   TouchableOpacity,
+  ImageBackground,
   ScrollView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
+import { auth } from "../config/firebase";
+import { signOut } from "firebase/auth";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function HomeScreen() {
   const navigation = useNavigation();
+  const { user } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      navigation.navigate("Login");
+    } catch (error) {
+      console.error("Çıkış yapılırken hata oluştu:", error);
+    }
+  };
 
   return (
-    <ScrollView style={styles.container}>
-      <LinearGradient colors={["#2E7D32", "#1B5E20"]} style={styles.background}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>✨ Hayal Dünyası</Text>
-          <View style={styles.headerMenu}>
-            <TouchableOpacity onPress={() => navigation.navigate("Draw")}>
-              <Text style={styles.headerMenuItem}>🎨 Çizim</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate("Stories")}>
-              <Text style={styles.headerMenuItem}>📚 Hikayeler</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate("Profile")}>
-              <Text style={styles.headerMenuItem}>👤 Profil</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+    <LinearGradient colors={["#2E7D32", "#1B5E20"]} style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Hayal Dünyası</Text>
+        {user && (
+          <TouchableOpacity
+            onPress={handleSignOut}
+            style={styles.signOutButton}
+          >
+            <Text style={styles.signOutText}>Çıkış Yap</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
-        {/* Main Content */}
+      <ScrollView style={styles.scrollView}>
         <View style={styles.mainContent}>
-          <Text style={styles.mainTitle}>Hayal Dünyası Büyülü Ormanı</Text>
+          <Text style={styles.mainTitle}>✨ Hayal Dünyasına Hoş Geldiniz</Text>
           <Text style={styles.subTitle}>
             Hayallerinizin büyülü ormanında maceraya hazır mısınız? 🌿
           </Text>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.primaryButton]}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate("Register")}
-            >
-              <Text style={styles.buttonText}>🌱 Hayallerine Başla</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.secondaryButton]}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate("Login")}
-            >
-              <Text style={styles.buttonText}>🌟 Hayal Dünyası Katıl</Text>
-            </TouchableOpacity>
-          </View>
+          {!user ? (
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.button, styles.primaryButton]}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate("Login")}
+              >
+                <Text style={styles.buttonText}>🌟 Giriş Yap</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.secondaryButton]}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate("Register")}
+              >
+                <Text style={styles.buttonText}>🌱 Kayıt Ol</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.button, styles.primaryButton]}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate("Draw")}
+              >
+                <Text style={styles.buttonText}>🎨 Çizim Yap</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.secondaryButton]}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate("Stories")}
+              >
+                <Text style={styles.buttonText}>📖 Hikayeler</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-          {/* Feature Cards */}
           <View style={styles.cardContainer}>
             <TouchableOpacity
               style={styles.card}
-              activeOpacity={0.9}
               onPress={() => navigation.navigate("Draw")}
             >
               <View style={styles.cardIconContainer}>
                 <Text style={styles.cardIcon}>🎨</Text>
               </View>
-              <Text style={styles.cardTitle}>Hayal Et ve Çiz</Text>
+              <Text style={styles.cardTitle}>Çizim Yap</Text>
               <Text style={styles.cardDescription}>
-                Hayallerini renkli çizimlerle hayata geçir!
+                Hayallerinizi çizime dökün
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.card}
-              activeOpacity={0.9}
               onPress={() => navigation.navigate("Stories")}
             >
               <View style={styles.cardIconContainer}>
-                <Text style={styles.cardIcon}>📚</Text>
+                <Text style={styles.cardIcon}>📖</Text>
               </View>
-              <Text style={styles.cardTitle}>Hayal Hikayeleri</Text>
+              <Text style={styles.cardTitle}>Hikayeler</Text>
               <Text style={styles.cardDescription}>
-                Özgün hayal yeri bir hikaye dünyası yeni bir macera!
+                Büyülü hikayeler oluşturun
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.card}
-              activeOpacity={0.9}
               onPress={() => navigation.navigate("Games")}
             >
               <View style={styles.cardIconContainer}>
                 <Text style={styles.cardIcon}>🎮</Text>
               </View>
-              <Text style={styles.cardTitle}>Hayal oyunları</Text>
+              <Text style={styles.cardTitle}>Oyunlar</Text>
               <Text style={styles.cardDescription}>
-                Hayallerini oyunlarla keşfedin!
+                Eğlenceli oyunlar oynayın
               </Text>
             </TouchableOpacity>
           </View>
         </View>
-      </LinearGradient>
-    </ScrollView>
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  background: {
-    minHeight: "100%",
-    width: "100%",
   },
   header: {
     flexDirection: "row",
@@ -122,30 +142,24 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.1)",
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#fff",
-    textShadowColor: "rgba(0,0,0,0.2)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
   },
-  headerMenu: {
-    flexDirection: "row",
-    gap: 20,
+  signOutButton: {
+    padding: 8,
   },
-  headerMenuItem: {
+  signOutText: {
     color: "#fff",
     fontSize: 16,
-    padding: 8,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 12,
-    overflow: "hidden",
+  },
+  scrollView: {
+    flex: 1,
   },
   mainContent: {
     flex: 1,
     alignItems: "center",
     paddingTop: 40,
-    paddingHorizontal: 20,
   },
   mainTitle: {
     fontSize: 32,
@@ -170,15 +184,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 20,
     marginBottom: 40,
-    flexWrap: "wrap",
-    justifyContent: "center",
   },
   button: {
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 25,
     elevation: 3,
-    minWidth: 180,
   },
   primaryButton: {
     backgroundColor: "#4CAF50",
@@ -190,25 +201,20 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
-    textAlign: "center",
   },
   cardContainer: {
     flexDirection: "row",
-    gap: 15,
-    padding: 10,
-    flexWrap: "wrap",
-    justifyContent: "center",
+    gap: 20,
+    padding: 20,
   },
   card: {
     backgroundColor: "rgba(255, 255, 255, 0.15)",
     padding: 20,
     borderRadius: 15,
     alignItems: "center",
-    width: "30%",
-    minWidth: 150,
+    flex: 1,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
-    margin: 5,
   },
   cardIconContainer: {
     width: 60,

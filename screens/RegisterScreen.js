@@ -8,20 +8,63 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
+import { auth } from "../config/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function RegisterScreen() {
-  const [username, setUsername] = useState("");
+  const navigation = useNavigation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const navigation = useNavigation();
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
-    // TODO: Implement registration logic
-    console.log("Register:", { username, email, password, confirmPassword });
+  const handleRegister = async () => {
+    if (!email || !password || !confirmPassword) {
+      Alert.alert("Hata", "Lütfen tüm alanları doldurun.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert("Hata", "Şifreler eşleşmiyor.");
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert("Hata", "Şifre en az 6 karakter olmalıdır.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await createUserWithEmailAndPassword(auth, email, password);
+      // Başarılı kayıt sonrası HomeScreen'e yönlendirilecek
+    } catch (error) {
+      console.error("Kayıt hatası:", error);
+      let errorMessage = "Kayıt olurken bir hata oluştu.";
+      switch (error.code) {
+        case "auth/email-already-in-use":
+          errorMessage = "Bu e-posta adresi zaten kullanımda.";
+          break;
+        case "auth/invalid-email":
+          errorMessage = "Geçersiz e-posta adresi.";
+          break;
+        case "auth/operation-not-allowed":
+          errorMessage = "E-posta/şifre girişi devre dışı bırakılmış.";
+          break;
+        case "auth/weak-password":
+          errorMessage = "Şifre çok zayıf.";
+          break;
+        default:
+          errorMessage = error.message;
+      }
+      Alert.alert("Kayıt Hatası", errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -31,32 +74,10 @@ export default function RegisterScreen() {
     >
       <LinearGradient colors={["#2E7D32", "#1B5E20"]} style={styles.background}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.backButton}
-            >
-              <Text style={styles.backButtonText}>← Geri</Text>
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Kayıt Ol</Text>
-            <View style={{ width: 50 }} /> {/* For centering the title */}
-          </View>
-
           <View style={styles.content}>
             <View style={styles.formContainer}>
-              <Text style={styles.title}>Hayal Dünyasına Katılın!</Text>
-              <Text style={styles.subtitle}>Yeni bir hesap oluşturun</Text>
-
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Kullanıcı Adı"
-                  placeholderTextColor="#A5D6A7"
-                  value={username}
-                  onChangeText={setUsername}
-                  autoCapitalize="none"
-                />
-              </View>
+              <Text style={styles.title}>✨ Hayal Dünyası</Text>
+              <Text style={styles.subtitle}>Yeni Hesap Oluştur</Text>
 
               <View style={styles.inputContainer}>
                 <TextInput
@@ -67,6 +88,7 @@ export default function RegisterScreen() {
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  editable={!loading}
                 />
               </View>
 
@@ -78,6 +100,7 @@ export default function RegisterScreen() {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
+                  editable={!loading}
                 />
               </View>
 
@@ -89,15 +112,22 @@ export default function RegisterScreen() {
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry
+                  editable={!loading}
                 />
               </View>
 
               <TouchableOpacity
-                style={styles.registerButton}
+                style={[
+                  styles.registerButton,
+                  loading && styles.registerButtonDisabled,
+                ]}
                 onPress={handleRegister}
                 activeOpacity={0.8}
+                disabled={loading}
               >
-                <Text style={styles.registerButtonText}>Kayıt Ol</Text>
+                <Text style={styles.registerButtonText}>
+                  {loading ? "Kayıt Yapılıyor..." : "Kayıt Ol"}
+                </Text>
               </TouchableOpacity>
 
               <View style={styles.loginContainer}>
@@ -124,26 +154,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 20,
-    paddingTop: 40,
-    backgroundColor: "rgba(0,0,0,0.1)",
-  },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    color: "#fff",
-    fontSize: 16,
-  },
-  headerTitle: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "bold",
-  },
   content: {
     flex: 1,
     justifyContent: "center",
@@ -157,17 +167,23 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.2)",
   },
   title: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: "bold",
     color: "#fff",
     textAlign: "center",
     marginBottom: 10,
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 5,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: "#E8F5E9",
     textAlign: "center",
     marginBottom: 30,
+    textShadowColor: "rgba(0,0,0,0.2)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   inputContainer: {
     marginBottom: 15,
@@ -206,5 +222,8 @@ const styles = StyleSheet.create({
     color: "#A5D6A7",
     fontSize: 14,
     fontWeight: "bold",
+  },
+  registerButtonDisabled: {
+    backgroundColor: "#81C784",
   },
 });
