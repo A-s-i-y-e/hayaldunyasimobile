@@ -40,8 +40,13 @@ export default function RegisterScreen() {
 
     try {
       setLoading(true);
-      await createUserWithEmailAndPassword(auth, email, password);
-      // Başarılı kayıt sonrası HomeScreen'e yönlendirilecek
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      console.log("Kayıt başarılı:", userCredential.user.email);
+      navigation.replace("Home");
     } catch (error) {
       console.error("Kayıt hatası:", error);
       let errorMessage = "Kayıt olurken bir hata oluştu.";
