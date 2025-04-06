@@ -102,49 +102,6 @@ export default function HomeScreen() {
             </TouchableOpacity>
           ))}
         </View>
-
-        <View style={styles.featuredSection}>
-          <Text style={styles.sectionTitle}>Ormanın Sırları</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.featuredScroll}
-          >
-            {[
-              {
-                title: "Peri Bahçesi",
-                description: "Renkli çiçekler ve büyülü yaratıklar",
-                image:
-                  "https://cdn-icons-png.flaticon.com/512/1995/1995581.png",
-              },
-              {
-                title: "Elf Köyü",
-                description: "Küçük evler ve dost canlısı elfler",
-                image:
-                  "https://cdn-icons-png.flaticon.com/512/1995/1995582.png",
-              },
-              {
-                title: "Büyücü Kulesi",
-                description: "Sihirli kitaplar ve gizemli formüller",
-                image:
-                  "https://cdn-icons-png.flaticon.com/512/1995/1995583.png",
-              },
-            ].map((item, index) => (
-              <View key={index} style={styles.featuredCard}>
-                <View style={styles.featuredImageContainer}>
-                  <Image
-                    source={{ uri: item.image }}
-                    style={styles.featuredImage}
-                  />
-                </View>
-                <Text style={styles.featuredTitle}>{item.title}</Text>
-                <Text style={styles.featuredDescription}>
-                  {item.description}
-                </Text>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
       </ScrollView>
     </LinearGradient>
   );
@@ -240,53 +197,5 @@ const styles = StyleSheet.create({
     color: "#666",
     fontSize: 11,
     textAlign: "center",
-  },
-  featuredSection: {
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 15,
-    textShadowColor: "rgba(0,0,0,0.2)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  featuredScroll: {
-    flexDirection: "row",
-  },
-  featuredCard: {
-    width: width * 0.7,
-    marginRight: 15,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderRadius: 20,
-    padding: 15,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  featuredImageContainer: {
-    width: "100%",
-    height: 120,
-    borderRadius: 10,
-    overflow: "hidden",
-    marginBottom: 8,
-  },
-  featuredImage: {
-    width: "100%",
-    height: "100%",
-  },
-  featuredTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 5,
-  },
-  featuredDescription: {
-    fontSize: 14,
-    color: "#666",
   },
 });

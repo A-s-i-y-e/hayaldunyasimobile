@@ -29,8 +29,13 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      await signInWithEmailAndPassword(auth, email, password);
-      // Başarılı giriş sonrası HomeScreen'e yönlendirilecek
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      console.log("Giriş başarılı:", userCredential.user.email);
+      navigation.replace("Home");
     } catch (error) {
       console.error("Giriş hatası:", error);
       let errorMessage = "Giriş yapılırken bir hata oluştu.";

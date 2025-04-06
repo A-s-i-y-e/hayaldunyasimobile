@@ -21,6 +21,23 @@ import StoriesScreen from "./screens/StoriesScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import GamesScreen from "./screens/GamesScreen";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import ProfileInfoScreen from "./screens/ProfileInfoScreen";
+import SettingsScreen from "./screens/SettingsScreen";
+import StatisticsScreen from "./screens/StatisticsScreen";
+import AchievementsScreen from "./screens/AchievementsScreen";
+import HelpSupportScreen from "./screens/HelpSupportScreen";
+import AboutScreen from "./screens/AboutScreen";
+import ParentalControlScreen from "./screens/ParentalControlScreen";
+import PrivacyScreen from "./screens/PrivacyScreen";
+import FairyTalesScreen from "./screens/FairyTalesScreen";
+import NewStoriesScreen from "./screens/NewStoriesScreen";
+import FavoritesScreen from "./screens/FavoritesScreen";
+import CreateStoryScreen from "./screens/CreateStoryScreen";
+import StoryDetailScreen from "./screens/StoryDetailScreen";
+import WordSearchScreen from "./screens/WordSearchScreen";
+import MemoryGameScreen from "./screens/MemoryGameScreen";
+import NumberGameScreen from "./screens/NumberGameScreen";
+import PuzzleScreen from "./screens/PuzzleScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -50,6 +67,47 @@ function Navigation() {
           <Stack.Screen name="Stories" component={StoriesScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="Games" component={GamesScreen} />
+          <Stack.Screen name="ProfileInfo" component={ProfileInfoScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="Statistics" component={StatisticsScreen} />
+          <Stack.Screen name="Achievements" component={AchievementsScreen} />
+          <Stack.Screen
+            name="HelpSupport"
+            component={HelpSupportScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="About"
+            component={AboutScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ParentalControl"
+            component={ParentalControlScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Privacy"
+            component={PrivacyScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen name="FairyTales" component={FairyTalesScreen} />
+          <Stack.Screen name="NewStories" component={NewStoriesScreen} />
+          <Stack.Screen name="Favorites" component={FavoritesScreen} />
+          <Stack.Screen
+            name="CreateStory"
+            component={CreateStoryScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="StoryDetail"
+            component={StoryDetailScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen name="WordSearch" component={WordSearchScreen} />
+          <Stack.Screen name="MemoryGame" component={MemoryGameScreen} />
+          <Stack.Screen name="NumberGame" component={NumberGameScreen} />
+          <Stack.Screen name="Puzzle" component={PuzzleScreen} />
         </>
       ) : (
         // Kullanıcı giriş yapmamışsa
@@ -74,122 +132,10 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  background: {
-    flex: 1,
-    width: "100%",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    paddingTop: 40,
-    backgroundColor: "rgba(0,0,0,0.1)",
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  headerMenu: {
-    flexDirection: "row",
-    gap: 20,
-  },
-  headerMenuItem: {
-    color: "#fff",
-    fontSize: 16,
-  },
-  mainContent: {
-    flex: 1,
-    alignItems: "center",
-    paddingTop: 40,
-  },
-  mainTitle: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
-    marginBottom: 10,
-    textShadowColor: "rgba(0,0,0,0.3)",
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 5,
-  },
-  subTitle: {
-    fontSize: 18,
-    color: "#E8F5E9",
-    textAlign: "center",
-    marginBottom: 30,
-    textShadowColor: "rgba(0,0,0,0.2)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    gap: 20,
-    marginBottom: 40,
-  },
-  button: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 25,
-    elevation: 3,
-  },
-  primaryButton: {
-    backgroundColor: "#4CAF50",
-  },
-  secondaryButton: {
-    backgroundColor: "#66BB6A",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  cardContainer: {
-    flexDirection: "row",
-    gap: 20,
-    padding: 20,
-  },
-  card: {
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    padding: 20,
-    borderRadius: 15,
-    alignItems: "center",
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  cardIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  cardIcon: {
-    fontSize: 32,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  cardDescription: {
-    fontSize: 14,
-    color: "#E8F5E9",
-    textAlign: "center",
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#1B5E20",
+    backgroundColor: "#2E7D32",
   },
 });
