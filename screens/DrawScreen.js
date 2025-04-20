@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   StyleSheet,
   View,
@@ -8,12 +8,30 @@ import {
   PanResponder,
   Dimensions,
   Platform,
+  Modal,
+  TextInput,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import ViewShot from "react-native-view-shot";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import {
+  Canvas,
+  Path,
+  Skia,
+  useDrawCallback,
+} from "@shopify/react-native-skia";
+import { useNavigation } from "@react-navigation/native";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import { storage } from "../config/firebase";
 
 const { width, height } = Dimensions.get("window");
 
@@ -36,7 +54,26 @@ const SHAPE_TYPES = {
   PENTAGON: "pentagon",
 };
 
+// Desen tipleri
+const PATTERN_TYPES = {
+  NONE: "none",
+  GRID: "grid",
+  DOTS: "dots",
+  LINES: "lines",
+  CIRCLES: "circles",
+  SQUARES: "squares",
+  TRIANGLES: "triangles",
+  STARS: "stars",
+  HEARTS: "hearts",
+  CLOUDS: "clouds",
+  FLOWERS: "flowers",
+  BUTTERFLIES: "butterflies",
+  RAINBOW: "rainbow",
+  BUBBLES: "bubbles",
+};
+
 export default function DrawScreen() {
+  const navigation = useNavigation();
   const [currentColor, setCurrentColor] = useState("#FF0000");
   const [brushSize, setBrushSize] = useState(5);
   const [paths, setPaths] = useState([]);
@@ -45,7 +82,25 @@ export default function DrawScreen() {
   const [brushType, setBrushType] = useState(BRUSH_TYPES.PEN);
   const [shapeType, setShapeType] = useState(null);
   const [startPoint, setStartPoint] = useState(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [drawingName, setDrawingName] = useState("");
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [undoStack, setUndoStack] = useState([]);
+  const [backgroundColor, setBackgroundColor] = useState("#FFFFFF");
+  const [isBackgroundPickerVisible, setIsBackgroundPickerVisible] =
+    useState(false);
+  const [backgroundPattern, setBackgroundPattern] = useState(null);
+  const [isPatternPickerVisible, setIsPatternPickerVisible] = useState(false);
   const viewShotRef = useRef();
+  const canvasRef = useRef(null);
+  const db = getFirestore();
+  const auth = getAuth();
+  const [isShapePickerVisible, setIsShapePickerVisible] = useState(false);
+  const [isBrushSizePickerVisible, setIsBrushSizePickerVisible] =
+    useState(false);
+  const [isColorPickerVisible, setIsColorPickerVisible] = useState(false);
+  const [isOpacityPickerVisible, setIsOpacityPickerVisible] = useState(false);
+  const [opacity, setOpacity] = useState(1);
 
   const colors = [
     "#FF0000", // Kırmızı
@@ -76,6 +131,8 @@ export default function DrawScreen() {
 
   const brushSizes = [2, 5, 10, 15];
 
+  const opacityLevels = [0.2, 0.4, 0.6, 0.8, 1];
+
   const handleTouchMove = (event) => {
     if (!isDrawing) return;
 
@@ -94,6 +151,7 @@ export default function DrawScreen() {
     setCurrentPath((prev) => ({
       ...prev,
       points: [...prev.points, { x, y }],
+      opacity: opacity,
     }));
   };
 
@@ -250,6 +308,7 @@ export default function DrawScreen() {
           color: isEraser ? "#FFFFFF" : currentColor,
           size: brushSize,
           type: shapeType || brushType,
+          opacity: opacity,
         };
 
         if (shapeType) {
@@ -266,7 +325,19 @@ export default function DrawScreen() {
   });
 
   const handleUndo = () => {
-    setPaths((prevPaths) => prevPaths.slice(0, -1));
+    if (paths.length > 0) {
+      const lastPath = paths[paths.length - 1];
+      setUndoStack((prev) => [...prev, lastPath]);
+      setPaths((prevPaths) => prevPaths.slice(0, -1));
+    }
+  };
+
+  const handleRedo = () => {
+    if (undoStack.length > 0) {
+      const lastUndo = undoStack[undoStack.length - 1];
+      setPaths((prevPaths) => [...prevPaths, lastUndo]);
+      setUndoStack((prev) => prev.slice(0, -1));
+    }
   };
 
   const handleClear = () => {
@@ -276,12 +347,357 @@ export default function DrawScreen() {
     ]);
   };
 
-  const handleSave = async () => {
+  const handleSaveDrawing = async () => {
+    if (!auth.currentUser) {
+      Alert.alert("Hata", "Lütfen önce giriş yapın");
+      return;
+    }
+
+    if (!drawingName.trim()) {
+      Alert.alert("Hata", "Lütfen çiziminize bir isim verin");
+      return;
+    }
+
     try {
+      // Canvas'ı base64 formatında görüntüye çevir
       const uri = await viewShotRef.current.capture();
-      await Sharing.shareAsync(uri);
+      if (!uri) {
+        throw new Error("Görüntü oluşturulamadı");
+      }
+
+      // Base64 formatını kontrol et ve düzelt
+      const base64Data = uri.startsWith("data:image")
+        ? uri
+        : `data:image/png;base64,${uri}`;
+
+      // Firestore'a kaydet
+      const drawingData = {
+        userId: auth.currentUser.uid,
+        name: drawingName,
+        imageData: base64Data,
+        createdAt: serverTimestamp(),
+        type: "drawing",
+      };
+
+      const drawingsCollection = collection(db, "drawings");
+      const docRef = await addDoc(drawingsCollection, drawingData);
+      if (!docRef) {
+        throw new Error("Firestore'a kaydedilemedi");
+      }
+
+      Alert.alert("Başarılı", "Çiziminiz başarıyla kaydedildi");
+      setDrawingName("");
+      setIsModalVisible(false);
+      navigation.navigate("CreateStory", {
+        drawingData: base64Data,
+        drawingName: drawingName,
+      });
     } catch (error) {
-      Alert.alert("Hata", "Çizim kaydedilirken bir hata oluştu.");
+      console.error("Kaydetme hatası:", error);
+      Alert.alert(
+        "Hata",
+        `Çizim kaydedilirken bir hata oluştu: ${error.message}`
+      );
+    }
+  };
+
+  const handleBackgroundColorChange = (color) => {
+    setBackgroundColor(color);
+    setIsBackgroundPickerVisible(false);
+  };
+
+  const handlePatternChange = (pattern) => {
+    setBackgroundPattern(pattern);
+    setIsPatternPickerVisible(false);
+  };
+
+  const renderPattern = () => {
+    if (!backgroundPattern || backgroundPattern === PATTERN_TYPES.NONE)
+      return null;
+
+    const patternStyle = {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      opacity: 0.2,
+    };
+
+    switch (backgroundPattern) {
+      case PATTERN_TYPES.GRID:
+        return (
+          <View style={[patternStyle, { backgroundColor: "transparent" }]}>
+            {Array.from({ length: 20 }).map((_, i) => (
+              <View
+                key={`h-${i}`}
+                style={[styles.gridLine, { top: `${i * 5}%` }]}
+              />
+            ))}
+            {Array.from({ length: 20 }).map((_, i) => (
+              <View
+                key={`v-${i}`}
+                style={[
+                  styles.gridLine,
+                  { left: `${i * 5}%`, transform: [{ rotate: "90deg" }] },
+                ]}
+              />
+            ))}
+          </View>
+        );
+      case PATTERN_TYPES.DOTS:
+        return (
+          <View style={[patternStyle, { backgroundColor: "transparent" }]}>
+            {Array.from({ length: 100 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  {
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    backgroundColor:
+                      colors[Math.floor(Math.random() * colors.length)],
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        );
+      case PATTERN_TYPES.LINES:
+        return (
+          <View style={[patternStyle, { backgroundColor: "transparent" }]}>
+            {Array.from({ length: 10 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.line,
+                  {
+                    transform: [{ rotate: `${i * 18}deg` }],
+                    backgroundColor:
+                      colors[Math.floor(Math.random() * colors.length)],
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        );
+      case PATTERN_TYPES.CIRCLES:
+        return (
+          <View style={[patternStyle, { backgroundColor: "transparent" }]}>
+            {Array.from({ length: 50 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.circle,
+                  {
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    backgroundColor:
+                      colors[Math.floor(Math.random() * colors.length)],
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        );
+      case PATTERN_TYPES.SQUARES:
+        return (
+          <View style={[patternStyle, { backgroundColor: "transparent" }]}>
+            {Array.from({ length: 30 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.square,
+                  {
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    backgroundColor:
+                      colors[Math.floor(Math.random() * colors.length)],
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        );
+      case PATTERN_TYPES.TRIANGLES:
+        return (
+          <View style={[patternStyle, { backgroundColor: "transparent" }]}>
+            {Array.from({ length: 40 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.triangle,
+                  {
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    borderBottomColor:
+                      colors[Math.floor(Math.random() * colors.length)],
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        );
+      case PATTERN_TYPES.STARS:
+        return (
+          <View style={[patternStyle, { backgroundColor: "transparent" }]}>
+            {Array.from({ length: 30 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.star,
+                  {
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                  },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="star"
+                  size={20}
+                  color={colors[Math.floor(Math.random() * colors.length)]}
+                />
+              </View>
+            ))}
+          </View>
+        );
+      case PATTERN_TYPES.HEARTS:
+        return (
+          <View style={[patternStyle, { backgroundColor: "transparent" }]}>
+            {Array.from({ length: 30 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.heart,
+                  {
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                  },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="heart"
+                  size={20}
+                  color={colors[Math.floor(Math.random() * colors.length)]}
+                />
+              </View>
+            ))}
+          </View>
+        );
+      case PATTERN_TYPES.CLOUDS:
+        return (
+          <View style={[patternStyle, { backgroundColor: "transparent" }]}>
+            {Array.from({ length: 20 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.cloud,
+                  {
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                  },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="weather-cloudy"
+                  size={30}
+                  color={colors[Math.floor(Math.random() * colors.length)]}
+                />
+              </View>
+            ))}
+          </View>
+        );
+      case PATTERN_TYPES.FLOWERS:
+        return (
+          <View style={[patternStyle, { backgroundColor: "transparent" }]}>
+            {Array.from({ length: 25 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.flower,
+                  {
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                  },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="flower"
+                  size={25}
+                  color={colors[Math.floor(Math.random() * colors.length)]}
+                />
+              </View>
+            ))}
+          </View>
+        );
+      case PATTERN_TYPES.BUTTERFLIES:
+        return (
+          <View style={[patternStyle, { backgroundColor: "transparent" }]}>
+            {Array.from({ length: 20 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.butterfly,
+                  {
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                  },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="butterfly"
+                  size={25}
+                  color={colors[Math.floor(Math.random() * colors.length)]}
+                />
+              </View>
+            ))}
+          </View>
+        );
+      case PATTERN_TYPES.RAINBOW:
+        return (
+          <View style={[patternStyle, { backgroundColor: "transparent" }]}>
+            {Array.from({ length: 10 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.rainbow,
+                  {
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                  },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="rainbow"
+                  size={30}
+                  color={colors[Math.floor(Math.random() * colors.length)]}
+                />
+              </View>
+            ))}
+          </View>
+        );
+      case PATTERN_TYPES.BUBBLES:
+        return (
+          <View style={[patternStyle, { backgroundColor: "transparent" }]}>
+            {Array.from({ length: 40 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.bubble,
+                  {
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    backgroundColor:
+                      colors[Math.floor(Math.random() * colors.length)],
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        );
+      default:
+        return null;
     }
   };
 
@@ -312,6 +728,7 @@ export default function DrawScreen() {
                 ),
                 height: path.size,
                 backgroundColor: path.color,
+                opacity: path.opacity || 1,
                 transform: [
                   {
                     rotate: `${Math.atan2(
@@ -411,6 +828,7 @@ export default function DrawScreen() {
                     ),
                     height: path.size,
                     backgroundColor: path.color,
+                    opacity: path.opacity || 1,
                     transform: [
                       {
                         rotate: `${Math.atan2(
@@ -470,6 +888,7 @@ export default function DrawScreen() {
                     ),
                     height: path.size,
                     backgroundColor: path.color,
+                    opacity: path.opacity || 1,
                     transform: [
                       {
                         rotate: `${Math.atan2(
@@ -534,6 +953,7 @@ export default function DrawScreen() {
                     ),
                     height: path.size,
                     backgroundColor: path.color,
+                    opacity: path.opacity || 1,
                     transform: [
                       {
                         rotate: `${Math.atan2(
@@ -592,6 +1012,7 @@ export default function DrawScreen() {
                     ),
                     height: path.size,
                     backgroundColor: path.color,
+                    opacity: path.opacity || 1,
                     transform: [
                       {
                         rotate: `${Math.atan2(
@@ -636,6 +1057,7 @@ export default function DrawScreen() {
                     ),
                     height: path.size,
                     backgroundColor: path.color,
+                    opacity: path.opacity || 1,
                     transform: [
                       {
                         rotate: `${Math.atan2(
@@ -645,7 +1067,8 @@ export default function DrawScreen() {
                       },
                     ],
                     transformOrigin: "0 0",
-                    opacity: path.type === BRUSH_TYPES.SPRAY ? 0.5 : 1,
+                    opacity:
+                      path.type === BRUSH_TYPES.SPRAY ? 0.5 : path.opacity || 1,
                   }}
                 />
               );
@@ -669,10 +1092,16 @@ export default function DrawScreen() {
           <TouchableOpacity style={styles.actionButton} onPress={handleUndo}>
             <MaterialCommunityIcons name="undo" size={24} color="#fff" />
           </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={handleRedo}>
+            <MaterialCommunityIcons name="redo" size={24} color="#fff" />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton} onPress={handleClear}>
             <MaterialCommunityIcons name="delete" size={24} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={() => setIsModalVisible(true)}
+          >
             <MaterialCommunityIcons
               name="content-save"
               size={24}
@@ -683,216 +1112,16 @@ export default function DrawScreen() {
       </View>
 
       <View style={styles.mainContent}>
-        <View style={styles.leftTools}>
-          <View style={styles.toolSection}>
-            <Text style={styles.toolSectionTitle}>Fırça Stilleri</Text>
-            <View style={styles.brushTypes}>
-              <TouchableOpacity
-                style={[
-                  styles.brushTypeButton,
-                  brushType === BRUSH_TYPES.PEN && styles.activeTool,
-                ]}
-                onPress={() => {
-                  setBrushType(BRUSH_TYPES.PEN);
-                  setShapeType(null);
-                }}
-              >
-                <MaterialCommunityIcons name="pencil" size={24} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.brushTypeButton,
-                  brushType === BRUSH_TYPES.BRUSH && styles.activeTool,
-                ]}
-                onPress={() => {
-                  setBrushType(BRUSH_TYPES.BRUSH);
-                  setShapeType(null);
-                }}
-              >
-                <MaterialCommunityIcons name="brush" size={24} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.brushTypeButton,
-                  brushType === BRUSH_TYPES.MARKER && styles.activeTool,
-                ]}
-                onPress={() => {
-                  setBrushType(BRUSH_TYPES.MARKER);
-                  setShapeType(null);
-                }}
-              >
-                <MaterialCommunityIcons name="marker" size={24} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.brushTypeButton,
-                  brushType === BRUSH_TYPES.SPRAY && styles.activeTool,
-                ]}
-                onPress={() => {
-                  setBrushType(BRUSH_TYPES.SPRAY);
-                  setShapeType(null);
-                }}
-              >
-                <MaterialCommunityIcons name="spray" size={24} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.toolSection}>
-            <Text style={styles.toolSectionTitle}>Şekiller</Text>
-            <View style={styles.shapes}>
-              <TouchableOpacity
-                style={[
-                  styles.shapeButton,
-                  shapeType === SHAPE_TYPES.LINE && styles.activeTool,
-                ]}
-                onPress={() => {
-                  setShapeType(SHAPE_TYPES.LINE);
-                  setBrushType(null);
-                }}
-              >
-                <MaterialCommunityIcons
-                  name="vector-line"
-                  size={20}
-                  color="#fff"
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.shapeButton,
-                  shapeType === SHAPE_TYPES.RECTANGLE && styles.activeTool,
-                ]}
-                onPress={() => {
-                  setShapeType(SHAPE_TYPES.RECTANGLE);
-                  setBrushType(null);
-                }}
-              >
-                <MaterialCommunityIcons
-                  name="rectangle-outline"
-                  size={20}
-                  color="#fff"
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.shapeButton,
-                  shapeType === SHAPE_TYPES.CIRCLE && styles.activeTool,
-                ]}
-                onPress={() => {
-                  setShapeType(SHAPE_TYPES.CIRCLE);
-                  setBrushType(null);
-                }}
-              >
-                <MaterialCommunityIcons
-                  name="circle-outline"
-                  size={20}
-                  color="#fff"
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.shapeButton,
-                  shapeType === SHAPE_TYPES.TRIANGLE && styles.activeTool,
-                ]}
-                onPress={() => {
-                  setShapeType(SHAPE_TYPES.TRIANGLE);
-                  setBrushType(null);
-                }}
-              >
-                <MaterialCommunityIcons
-                  name="triangle-outline"
-                  size={20}
-                  color="#fff"
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.shapeButton,
-                  shapeType === SHAPE_TYPES.STAR && styles.activeTool,
-                ]}
-                onPress={() => {
-                  setShapeType(SHAPE_TYPES.STAR);
-                  setBrushType(null);
-                }}
-              >
-                <MaterialCommunityIcons
-                  name="star-outline"
-                  size={20}
-                  color="#fff"
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.shapeButton,
-                  shapeType === SHAPE_TYPES.HEART && styles.activeTool,
-                ]}
-                onPress={() => {
-                  setShapeType(SHAPE_TYPES.HEART);
-                  setBrushType(null);
-                }}
-              >
-                <MaterialCommunityIcons
-                  name="heart-outline"
-                  size={20}
-                  color="#fff"
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.shapeButton,
-                  shapeType === SHAPE_TYPES.PENTAGON && styles.activeTool,
-                ]}
-                onPress={() => {
-                  setShapeType(SHAPE_TYPES.PENTAGON);
-                  setBrushType(null);
-                }}
-              >
-                <MaterialCommunityIcons
-                  name="pentagon-outline"
-                  size={20}
-                  color="#fff"
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.toolSection}>
-            <Text style={styles.toolSectionTitle}>Kalınlık</Text>
-            <View style={styles.brushSizes}>
-              {brushSizes.map((size, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.brushSizeButton,
-                    brushSize === size && styles.selectedBrushSize,
-                  ]}
-                  onPress={() => setBrushSize(size)}
-                >
-                  <View
-                    style={[
-                      styles.brushSizeIndicator,
-                      { width: size, height: size },
-                    ]}
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.toolSection}>
-            <View style={styles.colorTitleContainer}>
-              <Text style={styles.toolSectionTitle}>Renkler</Text>
-              <MaterialCommunityIcons
-                name="arrow-right"
-                size={12}
-                color="#fff"
-                style={styles.arrowIcon}
-              />
-            </View>
-          </View>
-        </View>
-
-        <ViewShot ref={viewShotRef} style={styles.canvas}>
+        <ViewShot
+          ref={viewShotRef}
+          style={[styles.canvas, { backgroundColor }]}
+          options={{
+            format: "png",
+            quality: 1,
+            result: "base64",
+          }}
+        >
+          {renderPattern()}
           <View {...panResponder.panHandlers} style={StyleSheet.absoluteFill}>
             {paths.map((path, index) => renderPath(path, index))}
             {currentPath.length > 0 &&
@@ -902,6 +1131,7 @@ export default function DrawScreen() {
                   color: isEraser ? "#FFFFFF" : currentColor,
                   size: brushSize,
                   type: shapeType || brushType,
+                  opacity: opacity,
                 },
                 "current"
               )}
@@ -911,6 +1141,185 @@ export default function DrawScreen() {
 
       <View style={styles.bottomTools}>
         <View style={styles.toolSection}>
+          <View style={styles.brushTypes}>
+            <TouchableOpacity
+              style={[
+                styles.brushTypeButton,
+                brushType === BRUSH_TYPES.PEN && styles.activeTool,
+                styles.penButton,
+              ]}
+              onPress={() => {
+                setBrushType(BRUSH_TYPES.PEN);
+                setShapeType(null);
+              }}
+            >
+              <MaterialCommunityIcons name="pencil" size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.brushTypeButton,
+                brushType === BRUSH_TYPES.BRUSH && styles.activeTool,
+                styles.brushButton,
+              ]}
+              onPress={() => {
+                setBrushType(BRUSH_TYPES.BRUSH);
+                setShapeType(null);
+              }}
+            >
+              <MaterialCommunityIcons name="brush" size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.brushTypeButton,
+                brushType === BRUSH_TYPES.MARKER && styles.activeTool,
+                styles.markerButton,
+              ]}
+              onPress={() => {
+                setBrushType(BRUSH_TYPES.MARKER);
+                setShapeType(null);
+              }}
+            >
+              <MaterialCommunityIcons name="marker" size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.brushTypeButton,
+                brushType === BRUSH_TYPES.SPRAY && styles.activeTool,
+                styles.sprayButton,
+              ]}
+              onPress={() => {
+                setBrushType(BRUSH_TYPES.SPRAY);
+                setShapeType(null);
+              }}
+            >
+              <MaterialCommunityIcons name="spray" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.toolSection}>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              isShapePickerVisible && styles.activeTool,
+              styles.shapeButton,
+            ]}
+            onPress={() => setIsShapePickerVisible(!isShapePickerVisible)}
+          >
+            <MaterialCommunityIcons name="shape" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.toolSection}>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              isBrushSizePickerVisible && styles.activeTool,
+              styles.sizeButton,
+            ]}
+            onPress={() =>
+              setIsBrushSizePickerVisible(!isBrushSizePickerVisible)
+            }
+          >
+            <MaterialCommunityIcons
+              name="format-line-weight"
+              size={24}
+              color="#fff"
+            />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.toolSection}>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              isColorPickerVisible && styles.activeTool,
+              styles.colorButton,
+            ]}
+            onPress={() => setIsColorPickerVisible(!isColorPickerVisible)}
+          >
+            <MaterialCommunityIcons name="palette" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.toolSection}>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              isBackgroundPickerVisible && styles.activeTool,
+              styles.fillButton,
+            ]}
+            onPress={() =>
+              setIsBackgroundPickerVisible(!isBackgroundPickerVisible)
+            }
+          >
+            <MaterialCommunityIcons
+              name="format-color-fill"
+              size={24}
+              color="#fff"
+            />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.toolSection}>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              isPatternPickerVisible && styles.activeTool,
+              styles.patternButton,
+            ]}
+            onPress={() => setIsPatternPickerVisible(!isPatternPickerVisible)}
+          >
+            <MaterialCommunityIcons name="texture" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.toolSection}>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              isOpacityPickerVisible && styles.activeTool,
+            ]}
+            onPress={() => setIsOpacityPickerVisible(!isOpacityPickerVisible)}
+          >
+            <MaterialCommunityIcons name="opacity" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <Modal visible={isModalVisible} transparent={true} animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Çizimi Kaydet</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Çiziminize bir isim verin"
+              value={drawingName}
+              onChangeText={setDrawingName}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setIsModalVisible(false);
+                  setDrawingName("");
+                }}
+              >
+                <Text style={styles.buttonText}>İptal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={handleSaveDrawing}
+              >
+                <Text style={styles.buttonText}>Kaydet</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {isBackgroundPickerVisible && (
+        <View style={styles.colorPickerContainer}>
           <View style={styles.colorPalette}>
             {colors.map((color, index) => (
               <TouchableOpacity
@@ -918,17 +1327,233 @@ export default function DrawScreen() {
                 style={[
                   styles.colorButton,
                   { backgroundColor: color },
-                  currentColor === color && styles.selectedColor,
+                  backgroundColor === color && styles.selectedColor,
+                ]}
+                onPress={() => handleBackgroundColorChange(color)}
+              />
+            ))}
+          </View>
+        </View>
+      )}
+
+      {isPatternPickerVisible && (
+        <View style={styles.patternPickerContainer}>
+          <View style={styles.patternGrid}>
+            {Object.entries(PATTERN_TYPES).map(([key, value]) => (
+              <TouchableOpacity
+                key={key}
+                style={[
+                  styles.patternButton,
+                  backgroundPattern === value && styles.selectedPattern,
+                ]}
+                onPress={() => handlePatternChange(value)}
+              >
+                {value === PATTERN_TYPES.NONE ? (
+                  <MaterialCommunityIcons name="close" size={24} color="#fff" />
+                ) : value === PATTERN_TYPES.GRID ? (
+                  <View style={styles.patternPreview}>
+                    <View style={[styles.previewLine, { top: 20 }]} />
+                    <View
+                      style={[
+                        styles.previewLine,
+                        { left: 20, transform: [{ rotate: "90deg" }] },
+                      ]}
+                    />
+                  </View>
+                ) : value === PATTERN_TYPES.DOTS ? (
+                  <View style={styles.patternPreview}>
+                    <View style={[styles.previewDot, { left: 10, top: 10 }]} />
+                    <View style={[styles.previewDot, { left: 20, top: 20 }]} />
+                    <View style={[styles.previewDot, { left: 30, top: 10 }]} />
+                  </View>
+                ) : value === PATTERN_TYPES.LINES ? (
+                  <View style={styles.patternPreview}>
+                    <View
+                      style={[
+                        styles.previewLine,
+                        { left: 5, top: 20, transform: [{ rotate: "45deg" }] },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.previewLine,
+                        { left: 5, top: 20, transform: [{ rotate: "-45deg" }] },
+                      ]}
+                    />
+                  </View>
+                ) : value === PATTERN_TYPES.CIRCLES ? (
+                  <View style={styles.patternPreview}>
+                    <View
+                      style={[styles.previewCircle, { left: 10, top: 10 }]}
+                    />
+                    <View
+                      style={[styles.previewCircle, { left: 20, top: 20 }]}
+                    />
+                  </View>
+                ) : value === PATTERN_TYPES.SQUARES ? (
+                  <View style={styles.patternPreview}>
+                    <View
+                      style={[styles.previewSquare, { left: 10, top: 10 }]}
+                    />
+                    <View
+                      style={[styles.previewSquare, { left: 20, top: 20 }]}
+                    />
+                  </View>
+                ) : value === PATTERN_TYPES.TRIANGLES ? (
+                  <View style={styles.patternPreview}>
+                    <View
+                      style={[styles.previewTriangle, { left: 10, top: 10 }]}
+                    />
+                    <View
+                      style={[styles.previewTriangle, { left: 20, top: 20 }]}
+                    />
+                  </View>
+                ) : value === PATTERN_TYPES.STARS ? (
+                  <MaterialCommunityIcons name="star" size={24} color="#fff" />
+                ) : value === PATTERN_TYPES.HEARTS ? (
+                  <MaterialCommunityIcons name="heart" size={24} color="#fff" />
+                ) : value === PATTERN_TYPES.CLOUDS ? (
+                  <MaterialCommunityIcons
+                    name="weather-cloudy"
+                    size={24}
+                    color="#fff"
+                  />
+                ) : value === PATTERN_TYPES.FLOWERS ? (
+                  <MaterialCommunityIcons
+                    name="flower"
+                    size={24}
+                    color="#fff"
+                  />
+                ) : value === PATTERN_TYPES.BUTTERFLIES ? (
+                  <MaterialCommunityIcons
+                    name="butterfly"
+                    size={24}
+                    color="#fff"
+                  />
+                ) : value === PATTERN_TYPES.RAINBOW ? (
+                  <MaterialCommunityIcons
+                    name="rainbow"
+                    size={24}
+                    color="#fff"
+                  />
+                ) : value === PATTERN_TYPES.BUBBLES ? (
+                  <View style={styles.patternPreview}>
+                    <View
+                      style={[styles.previewBubble, { left: 10, top: 10 }]}
+                    />
+                    <View
+                      style={[styles.previewBubble, { left: 20, top: 20 }]}
+                    />
+                    <View
+                      style={[styles.previewBubble, { left: 30, top: 10 }]}
+                    />
+                  </View>
+                ) : null}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {isShapePickerVisible && (
+        <View style={styles.patternPickerContainer}>
+          <View style={styles.patternGrid}>
+            {Object.entries(SHAPE_TYPES).map(([key, value]) => (
+              <TouchableOpacity
+                key={key}
+                style={[
+                  styles.patternButton,
+                  shapeType === value && styles.selectedPattern,
+                ]}
+                onPress={() => {
+                  setShapeType(value);
+                  setBrushType(null);
+                  setIsShapePickerVisible(false);
+                }}
+              >
+                <MaterialCommunityIcons
+                  name={getShapeIcon(value)}
+                  size={24}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {isBrushSizePickerVisible && (
+        <View style={styles.patternPickerContainer}>
+          <View style={styles.patternGrid}>
+            {brushSizes.map((size, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.patternButton,
+                  brushSize === size && styles.selectedPattern,
+                ]}
+                onPress={() => {
+                  setBrushSize(size);
+                  setIsBrushSizePickerVisible(false);
+                }}
+              >
+                <View
+                  style={[
+                    styles.brushSizeIndicator,
+                    { width: size, height: size },
+                  ]}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {isColorPickerVisible && (
+        <View style={styles.patternPickerContainer}>
+          <View style={styles.patternGrid}>
+            {colors.map((color, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.patternButton,
+                  { backgroundColor: color },
+                  currentColor === color && styles.selectedPattern,
                 ]}
                 onPress={() => {
                   setCurrentColor(color);
                   setIsEraser(false);
+                  setIsColorPickerVisible(false);
                 }}
               />
             ))}
           </View>
         </View>
-      </View>
+      )}
+
+      {isOpacityPickerVisible && (
+        <View style={styles.patternPickerContainer}>
+          <View style={styles.patternGrid}>
+            {opacityLevels.map((level) => (
+              <TouchableOpacity
+                key={level}
+                style={[
+                  styles.patternButton,
+                  opacity === level && styles.selectedPattern,
+                ]}
+                onPress={() => {
+                  setOpacity(level);
+                  setIsOpacityPickerVisible(false);
+                }}
+              >
+                <View style={styles.opacityPreviewContainer}>
+                  <View style={[styles.opacityPreview, { opacity: level }]} />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
     </LinearGradient>
   );
 }
@@ -958,48 +1583,31 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 4,
   },
   actionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: "rgba(255,255,255,0.1)",
     justifyContent: "center",
     alignItems: "center",
   },
   saveButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "rgba(255,255,255,0.1)",
     justifyContent: "center",
     alignItems: "center",
   },
   mainContent: {
     flex: 1,
-    flexDirection: "row",
-    height: "100%",
-  },
-  leftTools: {
-    width: 60,
-    padding: 8,
-    backgroundColor: "transparent",
-    borderRightWidth: 0,
-    height: "100%",
-    justifyContent: "flex-start",
-  },
-  rightTools: {
-    width: 60,
-    padding: 8,
-    backgroundColor: "rgba(0,0,0,0.2)",
-    borderLeftWidth: 1,
-    borderLeftColor: "rgba(255,255,255,0.1)",
+    margin: 10,
   },
   canvas: {
     flex: 1,
     backgroundColor: "#fff",
-    margin: 10,
     borderRadius: 15,
     elevation: 5,
     shadowColor: "#000",
@@ -1007,42 +1615,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
-  toolSection: {
-    marginBottom: 8,
-    alignItems: "center",
-    flex: 0,
-  },
-  toolSectionTitle: {
-    color: "#fff",
-    fontSize: 10,
-    marginBottom: 0,
-    fontWeight: "bold",
-    textAlign: "center",
-    width: "100%",
-  },
-  brushTypes: {
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 8,
-    flex: 0,
-  },
-  shapes: {
-    alignItems: "center",
-    gap: 8,
-    flex: 0,
-  },
-  brushTypeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.1)",
+  bottomTools: {
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    padding: 6,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.2)",
+    gap: 4,
   },
-  shapeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  toolSection: {
+    alignItems: "center",
+  },
+  brushTypes: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  brushTypeButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: "rgba(255,255,255,0.1)",
     justifyContent: "center",
     alignItems: "center",
@@ -1074,56 +1667,318 @@ const styles = StyleSheet.create({
     borderColor: "#FFD700",
     transform: [{ scale: 1.1 }],
   },
-  brushSizes: {
-    flexDirection: "column",
+  modalContainer: {
+    flex: 1,
     justifyContent: "center",
-    gap: 2,
-    marginBottom: 1,
-    paddingHorizontal: 5,
-    width: "100%",
-    flex: 0,
-  },
-  brushSizeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: "#fff",
     alignItems: "center",
-    justifyContent: "center",
-    margin: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
-  selectedBrushSize: {
-    borderColor: "#FFD700",
+  modalContent: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    width: "80%",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 15,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  modalButton: {
+    padding: 10,
+    borderRadius: 5,
+    width: "45%",
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#f44336",
+  },
+  saveButton: {
+    backgroundColor: "#4CAF50",
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  colorPickerContainer: {
+    position: "absolute",
+    bottom: 100,
+    right: 20,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    padding: 10,
+    borderRadius: 10,
+    zIndex: 1000,
+  },
+  patternPickerContainer: {
+    position: "absolute",
+    bottom: 100,
+    right: 20,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    padding: 10,
+    borderRadius: 10,
+    zIndex: 1000,
+  },
+  patternGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 8,
+  },
+  patternButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: "rgba(255,255,255,0.1)",
-    transform: [{ scale: 1.1 }],
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  selectedPattern: {
+    backgroundColor: "rgba(255,255,255,0.3)",
+    borderWidth: 2,
+    borderColor: "#FFD700",
+  },
+  gridLine: {
+    position: "absolute",
+    width: "100%",
+    height: 1,
+    backgroundColor: "#000",
+  },
+  dot: {
+    position: "absolute",
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  line: {
+    position: "absolute",
+    width: "100%",
+    height: 1,
+  },
+  circle: {
+    position: "absolute",
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  square: {
+    position: "absolute",
+    width: 12,
+    height: 12,
+  },
+  triangle: {
+    position: "absolute",
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderBottomWidth: 12,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+  },
+  star: {
+    position: "absolute",
+    width: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  heart: {
+    position: "absolute",
+    width: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cloud: {
+    position: "absolute",
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  flower: {
+    position: "absolute",
+    width: 25,
+    height: 25,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  butterfly: {
+    position: "absolute",
+    width: 25,
+    height: 25,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  rainbow: {
+    position: "absolute",
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  bubble: {
+    position: "absolute",
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    opacity: 0.7,
   },
   brushSizeIndicator: {
     backgroundColor: "#fff",
     borderRadius: 10,
   },
-  bottomTools: {
-    padding: 4,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.2)",
-    marginHorizontal: 10,
-    width: "80%",
-    alignSelf: "flex-end",
-    borderRadius: 8,
-  },
-  activeTool: {
-    backgroundColor: "rgba(255,255,255,0.3)",
-    borderWidth: 2,
-    borderColor: "#FFD700",
-    transform: [{ scale: 1.1 }],
-  },
-  colorTitleContainer: {
-    flexDirection: "row",
+  patternPreview: {
+    width: 40,
+    height: 40,
+    position: "relative",
+    justifyContent: "center",
     alignItems: "center",
-    gap: 4,
   },
-  arrowIcon: {
-    marginTop: 0,
+  previewLine: {
+    position: "absolute",
+    width: 20,
+    height: 1,
+    backgroundColor: "#fff",
+  },
+  previewDot: {
+    position: "absolute",
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#fff",
+  },
+  previewCircle: {
+    position: "absolute",
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#fff",
+  },
+  previewSquare: {
+    position: "absolute",
+    width: 8,
+    height: 8,
+    backgroundColor: "#fff",
+  },
+  previewTriangle: {
+    position: "absolute",
+    width: 0,
+    height: 0,
+    borderLeftWidth: 4,
+    borderRightWidth: 4,
+    borderBottomWidth: 8,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderBottomColor: "#fff",
+  },
+  previewBubble: {
+    position: "absolute",
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#fff",
+    opacity: 0.7,
+  },
+  opacityPreviewContainer: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#000",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#fff",
+    overflow: "hidden",
+  },
+  opacityPreview: {
+    width: 40,
+    height: 40,
+    backgroundColor: "#fff",
+  },
+  penButton: {
+    backgroundColor: "rgba(255, 99, 71, 0.7)", // Domates rengi
+  },
+  brushButton: {
+    backgroundColor: "rgba(65, 105, 225, 0.7)", // Kraliyet mavisi
+  },
+  markerButton: {
+    backgroundColor: "rgba(50, 205, 50, 0.7)", // Yeşil
+  },
+  sprayButton: {
+    backgroundColor: "rgba(147, 112, 219, 0.7)", // Orta mor
+  },
+  shapeButton: {
+    backgroundColor: "rgba(255, 215, 0, 0.7)", // Altın
+  },
+  sizeButton: {
+    backgroundColor: "rgba(255, 69, 0, 0.7)", // Turuncu-kırmızı
+  },
+  colorButton: {
+    backgroundColor: "rgba(0, 255, 255, 0.7)", // Turkuaz
+  },
+  fillButton: {
+    backgroundColor: "rgba(255, 0, 255, 0.7)", // Pembe
+  },
+  patternButton: {
+    backgroundColor: "rgba(0, 255, 0, 0.7)", // Yeşil
   },
 });
+
+const getPatternIcon = (pattern) => {
+  switch (pattern) {
+    case PATTERN_TYPES.NONE:
+      return "close";
+    case PATTERN_TYPES.GRID:
+      return "grid";
+    case PATTERN_TYPES.DOTS:
+      return "dots-grid";
+    case PATTERN_TYPES.LINES:
+      return "format-line-spacing";
+    case PATTERN_TYPES.CIRCLES:
+      return "circle-multiple";
+    case PATTERN_TYPES.SQUARES:
+      return "square";
+    case PATTERN_TYPES.TRIANGLES:
+      return "triangle";
+    case PATTERN_TYPES.STARS:
+      return "star";
+    case PATTERN_TYPES.HEARTS:
+      return "heart";
+    default:
+      return "close";
+  }
+};
+
+const getShapeIcon = (shape) => {
+  switch (shape) {
+    case SHAPE_TYPES.LINE:
+      return "vector-line";
+    case SHAPE_TYPES.RECTANGLE:
+      return "rectangle-outline";
+    case SHAPE_TYPES.CIRCLE:
+      return "circle-outline";
+    case SHAPE_TYPES.TRIANGLE:
+      return "triangle-outline";
+    case SHAPE_TYPES.STAR:
+      return "star-outline";
+    case SHAPE_TYPES.HEART:
+      return "heart-outline";
+    case SHAPE_TYPES.PENTAGON:
+      return "pentagon-outline";
+    default:
+      return "close";
+  }
+};

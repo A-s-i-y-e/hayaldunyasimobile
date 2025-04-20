@@ -1,4 +1,33 @@
-# HAYAL DÜNYAM: YAPAY ZEKA DESTEKLİ OKUL ÖNCESİ HİKAYE OLUŞTURMA PLATFORMU
+# Hayal Dünyam: Yapay Zeka Destekli Okul Öncesi Hikaye Oluşturma Platformu
+
+## Proje Durumu
+
+- ✅ Hafta 1: Proje Başlangıcı ve Planlama
+- ✅ Hafta 2: Geliştirme Ortamı
+- ✅ Hafta 3: Veritabanı Kurulumu-Temel Sayfalar-Ekranlar
+- ✅ Hafta 4: Kullanıcı Sistemi
+- ✅ Hafta 5: Çizim Sistemi - Temel
+- ✅ Hafta 6: Çizim Sistemi - Gelişmiş
+- ⏳ Hafta 7: Hikaye Oluşturma - Temel
+- ⏳ Hafta 8: Hikaye Oluşturma - Gelişmiş
+- ⏳ Hafta 9: Ses Özellikleri
+- ⏳ Hafta 10: Yapay Zeka - Temel
+- ⏳ Hafta 11: Ebeveyn Paneli
+- ⏳ Hafta 12: Temel Testler
+- ⏳ Hafta 13: Optimizasyon
+- ⏳ Hafta 14: Son Kontroller ve Yayın
+
+## Son Güncelleme (6. Hafta Tamamlandı)
+
+- Çizim sistemi geliştirildi ve aşağıdaki özellikler eklendi:
+  - Farklı fırça tipleri (kalem, fırça, marker, sprey)
+  - Renk seçici ve özel renk paleti
+  - Desen seçici (noktalar, çizgiler, şekiller, vb.)
+  - Opaklık ayarı
+  - Fırça kalınlığı ayarı
+  - Şekil çizme araçları
+  - Geri alma/ileri alma özellikleri
+  - Temizleme ve kaydetme seçenekleri
 
 ## Proje Hakkında
 
@@ -85,7 +114,7 @@
 - Temel şekiller (çizgi, dikdörtgen, daire) eklendi
 - Renk paleti ve kalınlık seçenekleri eklendi
 
-### 6. Hafta (Devam Ediyor) 🚧
+### 6. Hafta ✅
 
 - Gelişmiş çizim özellikleri eklendi:
   - Ek şekiller (üçgen, yıldız, kalp, beşgen)
