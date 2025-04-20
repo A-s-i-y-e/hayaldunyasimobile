@@ -72,6 +72,415 @@ const PATTERN_TYPES = {
   BUBBLES: "bubbles",
 };
 
+const getPatternIcon = (pattern) => {
+  switch (pattern) {
+    case PATTERN_TYPES.NONE:
+      return "close";
+    case PATTERN_TYPES.GRID:
+      return "grid";
+    case PATTERN_TYPES.DOTS:
+      return "dots-grid";
+    case PATTERN_TYPES.LINES:
+      return "format-line-spacing";
+    case PATTERN_TYPES.CIRCLES:
+      return "circle-multiple";
+    case PATTERN_TYPES.SQUARES:
+      return "square";
+    case PATTERN_TYPES.TRIANGLES:
+      return "triangle";
+    case PATTERN_TYPES.STARS:
+      return "star";
+    case PATTERN_TYPES.HEARTS:
+      return "heart";
+    default:
+      return "close";
+  }
+};
+
+const getShapeIcon = (shape) => {
+  switch (shape) {
+    case SHAPE_TYPES.LINE:
+      return "vector-line";
+    case SHAPE_TYPES.RECTANGLE:
+      return "rectangle-outline";
+    case SHAPE_TYPES.CIRCLE:
+      return "circle-outline";
+    case SHAPE_TYPES.TRIANGLE:
+      return "triangle-outline";
+    case SHAPE_TYPES.STAR:
+      return "star-outline";
+    case SHAPE_TYPES.HEART:
+      return "heart-outline";
+    case SHAPE_TYPES.PENTAGON:
+      return "pentagon-outline";
+    default:
+      return "close";
+  }
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 15,
+    paddingTop: Platform.OS === "ios" ? 50 : 30,
+    backgroundColor: "rgba(0,0,0,0.2)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#fff",
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  headerButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  actionButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  saveButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  mainContent: {
+    flex: 1,
+    margin: 10,
+  },
+  canvas: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  bottomTools: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 6,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.2)",
+    gap: 4,
+  },
+  toolSection: {
+    alignItems: "center",
+  },
+  brushTypes: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  brushTypeButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  penButton: {
+    backgroundColor: "#FF6B6B", // Kırmızımsı pembe
+  },
+  brushButton: {
+    backgroundColor: "#4ECDC4", // Turkuaz
+  },
+  markerButton: {
+    backgroundColor: "#FFD166", // Sarı
+  },
+  sprayButton: {
+    backgroundColor: "#A78BFA", // Mor
+  },
+  shapeButton: {
+    backgroundColor: "#FF9F1C", // Turuncu
+  },
+  brushSizeButton: {
+    backgroundColor: "#2EC4B6", // Açık mavi
+  },
+  colorButton: {
+    backgroundColor: "#E71D36", // Kırmızı
+  },
+  fillButton: {
+    backgroundColor: "#FF9F1C", // Turuncu
+  },
+  patternButton: {
+    backgroundColor: "#9B5DE5", // Mor
+  },
+  colorSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  colorPalette: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 4,
+    marginBottom: 1,
+    paddingHorizontal: 5,
+    width: "100%",
+  },
+  selectedColor: {
+    borderWidth: 3,
+    borderColor: "#FFD700",
+    transform: [{ scale: 1.1 }],
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    width: "80%",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 15,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  modalButton: {
+    padding: 10,
+    borderRadius: 5,
+    width: "45%",
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#f44336",
+  },
+  saveButton: {
+    backgroundColor: "#4CAF50",
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  colorPickerContainer: {
+    position: "absolute",
+    bottom: 100,
+    right: 20,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    padding: 10,
+    borderRadius: 10,
+    zIndex: 1000,
+  },
+  patternPickerContainer: {
+    position: "absolute",
+    bottom: 100,
+    right: 20,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    padding: 10,
+    borderRadius: 10,
+    zIndex: 1000,
+  },
+  patternGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 8,
+  },
+  selectedPattern: {
+    backgroundColor: "rgba(255,255,255,0.3)",
+    borderWidth: 2,
+    borderColor: "#FFD700",
+  },
+  gridLine: {
+    position: "absolute",
+    width: "100%",
+    height: 1,
+    backgroundColor: "#000",
+  },
+  dot: {
+    position: "absolute",
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  line: {
+    position: "absolute",
+    width: "100%",
+    height: 1,
+  },
+  circle: {
+    position: "absolute",
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  square: {
+    position: "absolute",
+    width: 12,
+    height: 12,
+  },
+  triangle: {
+    position: "absolute",
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderBottomWidth: 12,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+  },
+  star: {
+    position: "absolute",
+    width: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  heart: {
+    position: "absolute",
+    width: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cloud: {
+    position: "absolute",
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  flower: {
+    position: "absolute",
+    width: 25,
+    height: 25,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  butterfly: {
+    position: "absolute",
+    width: 25,
+    height: 25,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  rainbow: {
+    position: "absolute",
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  bubble: {
+    position: "absolute",
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    opacity: 0.7,
+  },
+  brushSizeIndicator: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+  },
+  patternPreview: {
+    width: 40,
+    height: 40,
+    position: "relative",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  previewLine: {
+    position: "absolute",
+    width: 20,
+    height: 1,
+    backgroundColor: "#fff",
+  },
+  previewDot: {
+    position: "absolute",
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#fff",
+  },
+  previewCircle: {
+    position: "absolute",
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#fff",
+  },
+  previewSquare: {
+    position: "absolute",
+    width: 8,
+    height: 8,
+    backgroundColor: "#fff",
+  },
+  previewTriangle: {
+    position: "absolute",
+    width: 0,
+    height: 0,
+    borderLeftWidth: 4,
+    borderRightWidth: 4,
+    borderBottomWidth: 8,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderBottomColor: "#fff",
+  },
+  previewBubble: {
+    position: "absolute",
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#fff",
+    opacity: 0.7,
+  },
+  opacityPreviewContainer: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#000",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#fff",
+    overflow: "hidden",
+  },
+  opacityPreview: {
+    width: 40,
+    height: 40,
+    backgroundColor: "#fff",
+  },
+});
+
 export default function DrawScreen() {
   const navigation = useNavigation();
   const [currentColor, setCurrentColor] = useState("#FF0000");
@@ -1145,8 +1554,8 @@ export default function DrawScreen() {
             <TouchableOpacity
               style={[
                 styles.brushTypeButton,
-                brushType === BRUSH_TYPES.PEN && styles.activeTool,
                 styles.penButton,
+                brushType === BRUSH_TYPES.PEN && styles.activeTool,
               ]}
               onPress={() => {
                 setBrushType(BRUSH_TYPES.PEN);
@@ -1158,8 +1567,8 @@ export default function DrawScreen() {
             <TouchableOpacity
               style={[
                 styles.brushTypeButton,
-                brushType === BRUSH_TYPES.BRUSH && styles.activeTool,
                 styles.brushButton,
+                brushType === BRUSH_TYPES.BRUSH && styles.activeTool,
               ]}
               onPress={() => {
                 setBrushType(BRUSH_TYPES.BRUSH);
@@ -1171,8 +1580,8 @@ export default function DrawScreen() {
             <TouchableOpacity
               style={[
                 styles.brushTypeButton,
-                brushType === BRUSH_TYPES.MARKER && styles.activeTool,
                 styles.markerButton,
+                brushType === BRUSH_TYPES.MARKER && styles.activeTool,
               ]}
               onPress={() => {
                 setBrushType(BRUSH_TYPES.MARKER);
@@ -1184,8 +1593,8 @@ export default function DrawScreen() {
             <TouchableOpacity
               style={[
                 styles.brushTypeButton,
-                brushType === BRUSH_TYPES.SPRAY && styles.activeTool,
                 styles.sprayButton,
+                brushType === BRUSH_TYPES.SPRAY && styles.activeTool,
               ]}
               onPress={() => {
                 setBrushType(BRUSH_TYPES.SPRAY);
@@ -1201,8 +1610,8 @@ export default function DrawScreen() {
           <TouchableOpacity
             style={[
               styles.actionButton,
-              isShapePickerVisible && styles.activeTool,
               styles.shapeButton,
+              isShapePickerVisible && styles.activeTool,
             ]}
             onPress={() => setIsShapePickerVisible(!isShapePickerVisible)}
           >
@@ -1214,8 +1623,8 @@ export default function DrawScreen() {
           <TouchableOpacity
             style={[
               styles.actionButton,
+              styles.brushSizeButton,
               isBrushSizePickerVisible && styles.activeTool,
-              styles.sizeButton,
             ]}
             onPress={() =>
               setIsBrushSizePickerVisible(!isBrushSizePickerVisible)
@@ -1233,8 +1642,8 @@ export default function DrawScreen() {
           <TouchableOpacity
             style={[
               styles.actionButton,
-              isColorPickerVisible && styles.activeTool,
               styles.colorButton,
+              isColorPickerVisible && styles.activeTool,
             ]}
             onPress={() => setIsColorPickerVisible(!isColorPickerVisible)}
           >
@@ -1246,8 +1655,8 @@ export default function DrawScreen() {
           <TouchableOpacity
             style={[
               styles.actionButton,
-              isBackgroundPickerVisible && styles.activeTool,
               styles.fillButton,
+              isBackgroundPickerVisible && styles.activeTool,
             ]}
             onPress={() =>
               setIsBackgroundPickerVisible(!isBackgroundPickerVisible)
@@ -1265,8 +1674,8 @@ export default function DrawScreen() {
           <TouchableOpacity
             style={[
               styles.actionButton,
-              isPatternPickerVisible && styles.activeTool,
               styles.patternButton,
+              isPatternPickerVisible && styles.activeTool,
             ]}
             onPress={() => setIsPatternPickerVisible(!isPatternPickerVisible)}
           >
@@ -1557,428 +1966,3 @@ export default function DrawScreen() {
     </LinearGradient>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 15,
-    paddingTop: Platform.OS === "ios" ? 50 : 30,
-    backgroundColor: "rgba(0,0,0,0.2)",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.1)",
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#fff",
-    textShadowColor: "rgba(0,0,0,0.3)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  headerButtons: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  actionButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  saveButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  mainContent: {
-    flex: 1,
-    margin: 10,
-  },
-  canvas: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  bottomTools: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 6,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.2)",
-    gap: 4,
-  },
-  toolSection: {
-    alignItems: "center",
-  },
-  brushTypes: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  brushTypeButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  colorSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  colorPalette: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 4,
-    marginBottom: 1,
-    paddingHorizontal: 5,
-    width: "100%",
-  },
-  colorButton: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: "#fff",
-    margin: 1,
-  },
-  selectedColor: {
-    borderWidth: 3,
-    borderColor: "#FFD700",
-    transform: [{ scale: 1.1 }],
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  modalContent: {
-    backgroundColor: "white",
-    padding: 20,
-    borderRadius: 10,
-    width: "80%",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 15,
-    textAlign: "center",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 15,
-  },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  modalButton: {
-    padding: 10,
-    borderRadius: 5,
-    width: "45%",
-    alignItems: "center",
-  },
-  cancelButton: {
-    backgroundColor: "#f44336",
-  },
-  saveButton: {
-    backgroundColor: "#4CAF50",
-  },
-  buttonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
-  colorPickerContainer: {
-    position: "absolute",
-    bottom: 100,
-    right: 20,
-    backgroundColor: "rgba(0,0,0,0.8)",
-    padding: 10,
-    borderRadius: 10,
-    zIndex: 1000,
-  },
-  patternPickerContainer: {
-    position: "absolute",
-    bottom: 100,
-    right: 20,
-    backgroundColor: "rgba(0,0,0,0.8)",
-    padding: 10,
-    borderRadius: 10,
-    zIndex: 1000,
-  },
-  patternGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 8,
-  },
-  patternButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  selectedPattern: {
-    backgroundColor: "rgba(255,255,255,0.3)",
-    borderWidth: 2,
-    borderColor: "#FFD700",
-  },
-  gridLine: {
-    position: "absolute",
-    width: "100%",
-    height: 1,
-    backgroundColor: "#000",
-  },
-  dot: {
-    position: "absolute",
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  line: {
-    position: "absolute",
-    width: "100%",
-    height: 1,
-  },
-  circle: {
-    position: "absolute",
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  square: {
-    position: "absolute",
-    width: 12,
-    height: 12,
-  },
-  triangle: {
-    position: "absolute",
-    width: 0,
-    height: 0,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderBottomWidth: 12,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-  },
-  star: {
-    position: "absolute",
-    width: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  heart: {
-    position: "absolute",
-    width: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cloud: {
-    position: "absolute",
-    width: 30,
-    height: 30,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  flower: {
-    position: "absolute",
-    width: 25,
-    height: 25,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  butterfly: {
-    position: "absolute",
-    width: 25,
-    height: 25,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  rainbow: {
-    position: "absolute",
-    width: 30,
-    height: 30,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bubble: {
-    position: "absolute",
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    opacity: 0.7,
-  },
-  brushSizeIndicator: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-  },
-  patternPreview: {
-    width: 40,
-    height: 40,
-    position: "relative",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  previewLine: {
-    position: "absolute",
-    width: 20,
-    height: 1,
-    backgroundColor: "#fff",
-  },
-  previewDot: {
-    position: "absolute",
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#fff",
-  },
-  previewCircle: {
-    position: "absolute",
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#fff",
-  },
-  previewSquare: {
-    position: "absolute",
-    width: 8,
-    height: 8,
-    backgroundColor: "#fff",
-  },
-  previewTriangle: {
-    position: "absolute",
-    width: 0,
-    height: 0,
-    borderLeftWidth: 4,
-    borderRightWidth: 4,
-    borderBottomWidth: 8,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderBottomColor: "#fff",
-  },
-  previewBubble: {
-    position: "absolute",
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#fff",
-    opacity: 0.7,
-  },
-  opacityPreviewContainer: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#000",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#fff",
-    overflow: "hidden",
-  },
-  opacityPreview: {
-    width: 40,
-    height: 40,
-    backgroundColor: "#fff",
-  },
-  penButton: {
-    backgroundColor: "rgba(255, 99, 71, 0.7)", // Domates rengi
-  },
-  brushButton: {
-    backgroundColor: "rgba(65, 105, 225, 0.7)", // Kraliyet mavisi
-  },
-  markerButton: {
-    backgroundColor: "rgba(50, 205, 50, 0.7)", // Yeşil
-  },
-  sprayButton: {
-    backgroundColor: "rgba(147, 112, 219, 0.7)", // Orta mor
-  },
-  shapeButton: {
-    backgroundColor: "rgba(255, 215, 0, 0.7)", // Altın
-  },
-  sizeButton: {
-    backgroundColor: "rgba(255, 69, 0, 0.7)", // Turuncu-kırmızı
-  },
-  colorButton: {
-    backgroundColor: "rgba(0, 255, 255, 0.7)", // Turkuaz
-  },
-  fillButton: {
-    backgroundColor: "rgba(255, 0, 255, 0.7)", // Pembe
-  },
-  patternButton: {
-    backgroundColor: "rgba(0, 255, 0, 0.7)", // Yeşil
-  },
-});
-
-const getPatternIcon = (pattern) => {
-  switch (pattern) {
-    case PATTERN_TYPES.NONE:
-      return "close";
-    case PATTERN_TYPES.GRID:
-      return "grid";
-    case PATTERN_TYPES.DOTS:
-      return "dots-grid";
-    case PATTERN_TYPES.LINES:
-      return "format-line-spacing";
-    case PATTERN_TYPES.CIRCLES:
-      return "circle-multiple";
-    case PATTERN_TYPES.SQUARES:
-      return "square";
-    case PATTERN_TYPES.TRIANGLES:
-      return "triangle";
-    case PATTERN_TYPES.STARS:
-      return "star";
-    case PATTERN_TYPES.HEARTS:
-      return "heart";
-    default:
-      return "close";
-  }
-};
-
-const getShapeIcon = (shape) => {
-  switch (shape) {
-    case SHAPE_TYPES.LINE:
-      return "vector-line";
-    case SHAPE_TYPES.RECTANGLE:
-      return "rectangle-outline";
-    case SHAPE_TYPES.CIRCLE:
-      return "circle-outline";
-    case SHAPE_TYPES.TRIANGLE:
-      return "triangle-outline";
-    case SHAPE_TYPES.STAR:
-      return "star-outline";
-    case SHAPE_TYPES.HEART:
-      return "heart-outline";
-    case SHAPE_TYPES.PENTAGON:
-      return "pentagon-outline";
-    default:
-      return "close";
-  }
-};

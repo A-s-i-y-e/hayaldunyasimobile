@@ -219,29 +219,29 @@ export default function CreateStoryScreen({ route }) {
               </View>
             </View>
             <View style={styles.formContainer}>
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Başlık</Text>
-                <TextInput
-                  style={styles.input}
-                  value={title}
-                  onChangeText={setTitle}
-                  placeholder="Hikayenin başlığını girin"
-                  placeholderTextColor="#999"
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Başlık</Text>
+          <TextInput
+            style={styles.input}
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Hikayenin başlığını girin"
+            placeholderTextColor="#999"
                   fontSize={13}
-                />
-              </View>
+          />
+        </View>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Kategori</Text>
-                <TextInput
-                  style={styles.input}
-                  value={category}
-                  onChangeText={setCategory}
-                  placeholder="Hikayenin kategorisini girin"
-                  placeholderTextColor="#999"
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Kategori</Text>
+          <TextInput
+            style={styles.input}
+            value={category}
+            onChangeText={setCategory}
+            placeholder="Hikayenin kategorisini girin"
+            placeholderTextColor="#999"
                   fontSize={13}
-                />
-              </View>
+          />
+        </View>
             </View>
           </View>
         )}
