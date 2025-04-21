@@ -96,14 +96,26 @@
   - Dikey kalınlık seçenekleri
   - Kullanıcı dostu arayüz düzenlemeleri
 
+### 7. Hafta ✅
+
+- Temel hikaye oluşturma özellikleri eklendi:
+  - Hikaye oluşturma ekranı
+  - Çizim seçimi ve entegrasyonu
+  - Metin girişi ve düzenleme
+  - Kategori seçimi
+  - Hikaye kaydetme ve yükleme
+  - Hikaye listeleme ve görüntüleme
+  - Arama ve filtreleme
+  - Hikaye düzenleme ve silme
+
 ### Yapılacaklar 🚀
 
-- Çizim sistemi geliştirme (devam)
-  - Fırça özelleştirme
-  - Şablon ekleme
-  - Katman sistemi
-  - Çizim efektleri
-- Hikaye oluşturma özellikleri
+- Hikaye oluşturma gelişmiş özellikleri
+  - Hikaye paylaşım özellikleri
+  - Gelişmiş önizleme
+  - Daha detaylı hata yönetimi
+  - Ek düzenleme araçları
+  - Gelişmiş filtreleme seçenekleri
 - Ses kayıt sistemi
 - Yapay zeka entegrasyonu
 - Ebeveyn kontrol paneli
