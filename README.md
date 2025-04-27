@@ -112,16 +112,15 @@
 
 - Gelişmiş hikaye oluşturma özellikleri eklendi:
   - Çoklu sayfa desteği
-  - Ses kayıt ve oynatma özellikleri
-  - Karakter animasyonları
-  - Arka plan efektleri
   - Hikaye düzenleme araçları
   - Hikaye şablonları
-  - Hikaye paylaşım seçenekleri
 
 ### Yapılacaklar 🚀
 
 - Ses kayıt sistemi
+- Hikaye paylaşım seçenekleri
+- Karakter animasyonları
+- Arka plan efektleri
 - Yapay zeka entegrasyonu
 - Ebeveyn kontrol paneli
 - Test ve optimizasyonlar
