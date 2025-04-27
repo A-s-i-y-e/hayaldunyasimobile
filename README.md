@@ -108,14 +108,19 @@
   - Arama ve filtreleme
   - Hikaye düzenleme ve silme
 
+### 8. Hafta ✅
+
+- Gelişmiş hikaye oluşturma özellikleri eklendi:
+  - Çoklu sayfa desteği
+  - Ses kayıt ve oynatma özellikleri
+  - Karakter animasyonları
+  - Arka plan efektleri
+  - Hikaye düzenleme araçları
+  - Hikaye şablonları
+  - Hikaye paylaşım seçenekleri
+
 ### Yapılacaklar 🚀
 
-- Hikaye oluşturma gelişmiş özellikleri
-  - Hikaye paylaşım özellikleri
-  - Gelişmiş önizleme
-  - Daha detaylı hata yönetimi
-  - Ek düzenleme araçları
-  - Gelişmiş filtreleme seçenekleri
 - Ses kayıt sistemi
 - Yapay zeka entegrasyonu
 - Ebeveyn kontrol paneli
@@ -147,80 +152,3 @@
 
 - TensorFlow.js
 - Web Speech API
-
-const menuItems = [
-{
-title: "Çizim Yap",
-icon: "pencil",
-color: "#FF6B6B",
-screen: "Draw",
-description: "Hayallerini çizime dök",
-image: "https://cdn-icons-png.flaticon.com/512/1995/1995574.png",
-},
-// ... diğer öğeler için de benzer şekilde
-];
-
-menuItem: {
-width: (width - 40) / 2,
-aspectRatio: 1,
-margin: 5,
-borderRadius: 20,
-padding: 15,
-justifyContent: "center",
-alignItems: "center",
-elevation: 5,
-shadowColor: "#000",
-shadowOffset: { width: 0, height: 2 },
-shadowOpacity: 0.25,
-shadowRadius: 3.84,
-backgroundColor: "rgba(255,255,255,0.9)",
-},
-
-<View style={styles.menuItemContent}>
-  <Image source={{ uri: item.image }} style={styles.menuImage} />
-  <Text style={styles.menuText}>{item.title}</Text>
-  <Text style={styles.menuDescription}>{item.description}</Text>
-</View>
-
-menuImage: {
-width: 80,
-height: 80,
-marginBottom: 10,
-},
-
-menuText: {
-color: "#333",
-fontSize: 16,
-fontWeight: "bold",
-textAlign: "center",
-marginBottom: 5,
-},
-menuDescription: {
-color: "#666",
-fontSize: 12,
-textAlign: "center",
-},
-
-featuredCard: {
-width: width \* 0.7,
-marginRight: 15,
-backgroundColor: "rgba(255,255,255,0.9)",
-borderRadius: 20,
-padding: 15,
-elevation: 5,
-shadowColor: "#000",
-shadowOffset: { width: 0, height: 2 },
-shadowOpacity: 0.25,
-shadowRadius: 3.84,
-},
-
-featuredTitle: {
-fontSize: 20,
-fontWeight: "bold",
-color: "#333",
-marginBottom: 5,
-},
-featuredDescription: {
-fontSize: 14,
-color: "#666",
-},

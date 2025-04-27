@@ -17,10 +17,6 @@ import {
   query,
   where,
   getDocs,
-  doc,
-  getDoc,
-  updateDoc,
-  arrayRemove,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
@@ -41,77 +37,46 @@ const colorPalette = [
   { bg: "#F1F8E9", text: "#689F38" },
 ];
 
-export default function FavoritesScreen() {
+export default function FairyTaleWorldScreen() {
   const navigation = useNavigation();
   const [stories, setStories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [favorites, setFavorites] = useState([]);
   const db = getFirestore();
   const auth = getAuth();
 
   useEffect(() => {
-    fetchFavorites();
+    fetchStories();
   }, []);
 
-  const fetchFavorites = async () => {
+  const fetchStories = async () => {
     try {
-      if (!auth.currentUser) return;
+      const q = query(
+        collection(db, "stories"),
+        where("category", "==", "Masal"),
+        where("isPublic", "==", true)
+      );
+      const querySnapshot = await getDocs(q);
+      let storiesList = [];
 
-      // Önce kullanıcının favori listesini al
-      const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const favoriteIds = userData.favorites || [];
-        setFavorites(favoriteIds);
-
-        // Favori hikayeleri getir
-        if (favoriteIds.length > 0) {
-          const storiesQuery = query(
-            collection(db, "stories"),
-            where("__name__", "in", favoriteIds)
-          );
-          const querySnapshot = await getDocs(storiesQuery);
-          let storiesList = [];
-
-          querySnapshot.forEach((doc) => {
-            const randomColor =
-              colorPalette[Math.floor(Math.random() * colorPalette.length)];
-            storiesList.push({
-              id: doc.id,
-              ...doc.data(),
-              backgroundColor: randomColor.bg,
-              textColor: randomColor.text,
-            });
-          });
-
-          // En yeni hikayeler önce gelecek şekilde sırala
-          storiesList.sort((a, b) => b.createdAt - a.createdAt);
-          setStories(storiesList);
-        } else {
-          setStories([]);
-        }
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error("Favori hikayeler yüklenirken hata:", error);
-      setLoading(false);
-    }
-  };
-
-  const handleRemoveFavorite = async (storyId) => {
-    try {
-      if (!auth.currentUser) return;
-
-      const userRef = doc(db, "users", auth.currentUser.uid);
-      await updateDoc(userRef, {
-        favorites: arrayRemove(storyId),
+      querySnapshot.forEach((doc) => {
+        const randomColor =
+          colorPalette[Math.floor(Math.random() * colorPalette.length)];
+        storiesList.push({
+          id: doc.id,
+          ...doc.data(),
+          backgroundColor: randomColor.bg,
+          textColor: randomColor.text,
+        });
       });
 
-      // Local state'i güncelle
-      setFavorites(favorites.filter((id) => id !== storyId));
-      setStories(stories.filter((story) => story.id !== storyId));
+      // En yeni hikayeler önce gelecek şekilde sırala
+      storiesList.sort((a, b) => b.createdAt - a.createdAt);
+
+      setStories(storiesList);
+      setLoading(false);
     } catch (error) {
-      console.error("Favori kaldırılırken hata:", error);
+      console.error("Masallar yüklenirken hata:", error);
+      setLoading(false);
     }
   };
 
@@ -129,24 +94,18 @@ export default function FavoritesScreen() {
   return (
     <LinearGradient colors={["#2E7D32", "#1B5E20"]} style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Favorilerim</Text>
+        <Text style={styles.title}>Masal Dünyası</Text>
       </View>
 
       <ScrollView style={styles.content}>
         {loading ? (
           <Text style={styles.loadingText}>Yükleniyor...</Text>
         ) : stories.length === 0 ? (
-          <Text style={styles.emptyText}>Henüz favori hikaye eklemediniz</Text>
+          <Text style={styles.emptyText}>Henüz masal bulunmuyor</Text>
         ) : (
-          <View style={styles.gridContainer}>
+          <View style={styles.storiesGrid}>
             {stories.map((story) => (
-              <View
+              <TouchableOpacity
                 key={story.id}
                 style={[
                   styles.card,
@@ -175,7 +134,7 @@ export default function FavoritesScreen() {
                     style={[styles.description, { color: story.textColor }]}
                     numberOfLines={2}
                   >
-                    {story.content?.substring(0, 100)}...
+                    {story.description}
                   </Text>
                   <View style={styles.infoContainer}>
                     <View style={styles.infoItem}>
@@ -216,35 +175,20 @@ export default function FavoritesScreen() {
                         {story.readTime}
                       </Text>
                     </View>
-                    <View style={styles.buttonContainer}>
-                      <TouchableOpacity
-                        style={[
-                          styles.actionButton,
-                          { backgroundColor: story.textColor },
-                        ]}
-                        onPress={() => handleRemoveFavorite(story.id)}
-                      >
-                        <MaterialCommunityIcons
-                          name="heart"
-                          size={14}
-                          color="#fff"
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[
-                          styles.readButton,
-                          { backgroundColor: story.textColor },
-                        ]}
-                        onPress={() =>
-                          navigation.navigate("StoryDetail", { story })
-                        }
-                      >
-                        <Text style={styles.readButtonText}>Oku</Text>
-                      </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.readButton,
+                        { backgroundColor: story.textColor },
+                      ]}
+                      onPress={() =>
+                        navigation.navigate("StoryDetail", { story })
+                      }
+                    >
+                      <Text style={styles.readButtonText}>Oku</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -258,13 +202,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
     paddingTop: 50,
-  },
-  backButton: {
-    marginRight: 16,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    backgroundColor: "rgba(0,0,0,0.1)",
   },
   title: {
     fontSize: 24,
@@ -273,9 +214,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 16,
+    padding: 20,
   },
-  gridContainer: {
+  storiesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
@@ -336,17 +277,6 @@ const styles = StyleSheet.create({
   readTime: {
     fontSize: 12,
     marginLeft: 4,
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  actionButton: {
-    padding: 8,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
   },
   readButton: {
     paddingHorizontal: 15,

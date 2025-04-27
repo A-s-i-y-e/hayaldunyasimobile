@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -11,81 +11,125 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  getDoc,
+} from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 const { width } = Dimensions.get("window");
-const CARD_WIDTH = (width - 60) / 2; // 2 sütun için hesaplama
+const CARD_WIDTH = (width - 60) / 2;
+
+// Renk paleti
+const colorPalette = [
+  { bg: "#E3F2FD", text: "#1976D2" },
+  { bg: "#F3E5F5", text: "#7B1FA2" },
+  { bg: "#FFF3E0", text: "#E65100" },
+  { bg: "#E8F5E9", text: "#2E7D32" },
+  { bg: "#FFEBEE", text: "#C62828" },
+  { bg: "#E0F7FA", text: "#00838F" },
+  { bg: "#F5F5F5", text: "#424242" },
+  { bg: "#FFF8E1", text: "#FF8F00" },
+  { bg: "#E8EAF6", text: "#3949AB" },
+  { bg: "#F1F8E9", text: "#689F38" },
+];
 
 export default function NewStoriesScreen() {
   const navigation = useNavigation();
-  const newStories = [
-    {
-      id: 1,
-      title: "Uzay Macerası",
-      image: "https://cdn-icons-png.flaticon.com/512/1995/1995597.png",
-      author: "Ayşe Yılmaz",
-      date: "2 gün önce",
-      readTime: "1 saat",
-      description: "Ali ve Ayşe'nin uzaylılarla yaşadığı büyülü macera...",
-      backgroundColor: "#E3F2FD",
-      textColor: "#1976D2",
-    },
-    {
-      id: 2,
-      title: "Ormanın Sırrı",
-      image: "https://cdn-icons-png.flaticon.com/512/1995/1995598.png",
-      author: "Mehmet Demir",
-      date: "3 gün önce",
-      readTime: "45 dk",
-      description:
-        "Zeynep'in ormanın derinliklerinde keşfettiği büyülü dünya...",
-      backgroundColor: "#F3E5F5",
-      textColor: "#7B1FA2",
-    },
-    {
-      id: 3,
-      title: "Deniz Altı Dünyası",
-      image: "https://cdn-icons-png.flaticon.com/512/1995/1995599.png",
-      author: "Zeynep Kaya",
-      date: "4 gün önce",
-      readTime: "1.5 saat",
-      description: "Mehmet'in deniz altında yaşadığı unutulmaz macera...",
-      backgroundColor: "#FFF3E0",
-      textColor: "#E65100",
-    },
-    {
-      id: 4,
-      title: "Büyülü Kutu",
-      image: "https://cdn-icons-png.flaticon.com/512/1995/1995600.png",
-      author: "Ali Şahin",
-      date: "5 gün önce",
-      readTime: "30 dk",
-      description: "Can'ın bulduğu büyülü kutunun sırrı...",
-      backgroundColor: "#E8F5E9",
-      textColor: "#2E7D32",
-    },
-    {
-      id: 5,
-      title: "Gizemli Ada",
-      image: "https://cdn-icons-png.flaticon.com/512/1995/1995601.png",
-      author: "Fatma Öztürk",
-      date: "1 hafta önce",
-      readTime: "2 saat",
-      description: "Ela'nın haritada bulduğu gizemli adadaki macerası...",
-      backgroundColor: "#FFEBEE",
-      textColor: "#C62828",
-    },
-    {
-      id: 6,
-      title: "Zaman Yolculuğu",
-      image: "https://cdn-icons-png.flaticon.com/512/1995/1995602.png",
-      author: "Can Yıldız",
-      date: "1 hafta önce",
-      readTime: "1 saat",
-      description: "Deniz'in zaman makinesiyle yaşadığı macera...",
-      backgroundColor: "#E0F7FA",
-      textColor: "#00838F",
-    },
-  ];
+  const [stories, setStories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [favorites, setFavorites] = useState([]);
+  const db = getFirestore();
+  const auth = getAuth();
+
+  useEffect(() => {
+    fetchStories();
+    fetchFavorites();
+  }, []);
+
+  const fetchStories = async () => {
+    try {
+      const q = query(collection(db, "stories"));
+      const querySnapshot = await getDocs(q);
+      let storiesList = [];
+
+      querySnapshot.forEach((doc) => {
+        const randomColor =
+          colorPalette[Math.floor(Math.random() * colorPalette.length)];
+        storiesList.push({
+          id: doc.id,
+          ...doc.data(),
+          backgroundColor: randomColor.bg,
+          textColor: randomColor.text,
+        });
+      });
+
+      // En yeni hikayeler önce gelecek şekilde sırala
+      storiesList.sort((a, b) => b.createdAt - a.createdAt);
+
+      setStories(storiesList);
+      setLoading(false);
+    } catch (error) {
+      console.error("Hikayeler yüklenirken hata:", error);
+      setLoading(false);
+    }
+  };
+
+  const fetchFavorites = async () => {
+    try {
+      if (!auth.currentUser) return;
+
+      const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        setFavorites(userData.favorites || []);
+      }
+    } catch (error) {
+      console.error("Favoriler yüklenirken hata:", error);
+    }
+  };
+
+  const toggleFavorite = async (storyId) => {
+    try {
+      if (!auth.currentUser) return;
+
+      const userRef = doc(db, "users", auth.currentUser.uid);
+      const isFavorite = favorites.includes(storyId);
+
+      if (isFavorite) {
+        await updateDoc(userRef, {
+          favorites: arrayRemove(storyId),
+        });
+        setFavorites(favorites.filter((id) => id !== storyId));
+      } else {
+        await updateDoc(userRef, {
+          favorites: arrayUnion(storyId),
+        });
+        setFavorites([...favorites, storyId]);
+      }
+    } catch (error) {
+      console.error("Favori işlemi sırasında hata:", error);
+    }
+  };
+
+  const getImageSource = (imageData) => {
+    if (!imageData) return null;
+    if (imageData.startsWith("data:image")) {
+      return { uri: imageData };
+    } else if (imageData.startsWith("http")) {
+      return { uri: imageData };
+    } else {
+      return { uri: `data:image/png;base64,${imageData.replace(/\n/g, "")}` };
+    }
+  };
 
   return (
     <LinearGradient colors={["#2E7D32", "#1B5E20"]} style={styles.container}>
@@ -94,75 +138,107 @@ export default function NewStoriesScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        <View style={styles.storiesGrid}>
-          {newStories.map((story) => (
-            <TouchableOpacity
-              key={story.id}
-              style={[
-                styles.card,
-                { width: CARD_WIDTH, backgroundColor: story.backgroundColor },
-              ]}
-            >
-              <Image source={{ uri: story.image }} style={styles.image} />
-              <View style={styles.cardContent}>
-                <Text style={[styles.cardTitle, { color: story.textColor }]}>
-                  {story.title}
-                </Text>
-                <Text
-                  style={[styles.description, { color: story.textColor }]}
-                  numberOfLines={2}
-                >
-                  {story.description}
-                </Text>
-                <View style={styles.infoContainer}>
-                  <View style={styles.infoItem}>
+        {loading ? (
+          <Text style={styles.loadingText}>Yükleniyor...</Text>
+        ) : stories.length === 0 ? (
+          <Text style={styles.emptyText}>Henüz hikaye bulunmuyor</Text>
+        ) : (
+          <View style={styles.storiesGrid}>
+            {stories.map((story) => (
+              <TouchableOpacity
+                key={story.id}
+                style={[
+                  styles.card,
+                  { width: CARD_WIDTH, backgroundColor: story.backgroundColor },
+                ]}
+              >
+                {story.drawing?.imageData ? (
+                  <Image
+                    source={getImageSource(story.drawing.imageData)}
+                    style={styles.image}
+                  />
+                ) : (
+                  <View style={[styles.image, styles.placeholderImage]}>
                     <MaterialCommunityIcons
-                      name="account"
-                      size={14}
+                      name="book-open-variant"
+                      size={40}
                       color={story.textColor}
                     />
-                    <Text style={[styles.infoText, { color: story.textColor }]}>
-                      {story.author}
-                    </Text>
                   </View>
-                  <View style={styles.dateContainer}>
-                    <MaterialCommunityIcons
-                      name="calendar"
-                      size={14}
-                      color={story.textColor}
-                    />
-                    <Text style={[styles.dateText, { color: story.textColor }]}>
-                      {story.date}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.bottomContainer}>
-                  <View style={styles.readTimeContainer}>
-                    <MaterialCommunityIcons
-                      name="clock-outline"
-                      size={14}
-                      color={story.textColor}
-                    />
-                    <Text style={[styles.readTime, { color: story.textColor }]}>
-                      {story.readTime}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.readButton,
-                      { backgroundColor: story.textColor },
-                    ]}
-                    onPress={() =>
-                      navigation.navigate("StoryDetail", { story: story })
-                    }
+                )}
+                <View style={styles.cardContent}>
+                  <Text style={[styles.cardTitle, { color: story.textColor }]}>
+                    {story.title}
+                  </Text>
+                  <Text
+                    style={[styles.description, { color: story.textColor }]}
+                    numberOfLines={2}
                   >
-                    <Text style={styles.readButtonText}>Oku</Text>
-                  </TouchableOpacity>
+                    {story.description}
+                  </Text>
+                  <View style={styles.infoContainer}>
+                    <View style={styles.infoItem}>
+                      <MaterialCommunityIcons
+                        name="account"
+                        size={14}
+                        color={story.textColor}
+                      />
+                      <Text
+                        style={[styles.infoText, { color: story.textColor }]}
+                      >
+                        {story.author}
+                      </Text>
+                    </View>
+                    <View style={styles.infoItem}>
+                      <MaterialCommunityIcons
+                        name="tag"
+                        size={14}
+                        color={story.textColor}
+                      />
+                      <Text
+                        style={[styles.infoText, { color: story.textColor }]}
+                      >
+                        {story.category}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.bottomContainer}>
+                    <View style={styles.buttonContainer}>
+                      <TouchableOpacity
+                        style={[
+                          styles.favoriteButton,
+                          { backgroundColor: story.textColor },
+                        ]}
+                        onPress={() => toggleFavorite(story.id)}
+                      >
+                        <MaterialCommunityIcons
+                          name={
+                            favorites.includes(story.id)
+                              ? "heart"
+                              : "heart-outline"
+                          }
+                          size={16}
+                          color="#fff"
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.readButton,
+                          { backgroundColor: story.textColor },
+                        ]}
+                        onPress={() =>
+                          navigation.navigate("StoryDetail", { story })
+                        }
+                      >
+                        <Text style={styles.readButtonText}>Oku</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </LinearGradient>
   );
@@ -203,34 +279,32 @@ const styles = StyleSheet.create({
   },
   image: {
     width: "100%",
-    height: 80,
+    height: 150,
     borderTopLeftRadius: 15,
     borderTopRightRadius: 15,
-    objectFit: "contain",
+  },
+  placeholderImage: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   cardContent: {
-    padding: 10,
+    padding: 15,
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "bold",
-    marginBottom: 4,
+    marginBottom: 8,
   },
   description: {
-    fontSize: 11,
-    marginBottom: 8,
-    lineHeight: 14,
+    fontSize: 12,
+    marginBottom: 10,
   },
   infoContainer: {
-    flexDirection: "column",
-    marginBottom: 0,
+    flexDirection: "row",
+    marginBottom: 10,
   },
   infoItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  dateContainer: {
     flexDirection: "row",
     alignItems: "center",
   },
@@ -238,33 +312,42 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginLeft: 4,
   },
-  dateText: {
-    fontSize: 12,
-    marginLeft: 4,
-  },
   bottomContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     alignItems: "center",
-    marginTop: 0,
+    marginTop: 10,
   },
-  readTimeContainer: {
+  buttonContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  favoriteButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
     flexDirection: "row",
     alignItems: "center",
   },
-  readTime: {
-    fontSize: 12,
-    marginLeft: 4,
-  },
   readButton: {
-    paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 8,
-    alignItems: "center",
+    paddingVertical: 6,
+    borderRadius: 15,
   },
   readButtonText: {
     color: "#fff",
     fontSize: 12,
     fontWeight: "bold",
+  },
+  loadingText: {
+    color: "#fff",
+    textAlign: "center",
+    marginTop: 20,
+  },
+  emptyText: {
+    color: "#fff",
+    textAlign: "center",
+    marginTop: 20,
   },
 });

@@ -92,6 +92,16 @@ const getPatternIcon = (pattern) => {
       return "star";
     case PATTERN_TYPES.HEARTS:
       return "heart";
+    case PATTERN_TYPES.CLOUDS:
+      return "weather-cloudy";
+    case PATTERN_TYPES.FLOWERS:
+      return "flower";
+    case PATTERN_TYPES.BUTTERFLIES:
+      return "butterfly";
+    case PATTERN_TYPES.RAINBOW:
+      return "weather-sunny";
+    case PATTERN_TYPES.BUBBLES:
+      return "bubble";
     default:
       return "close";
   }
@@ -293,12 +303,17 @@ const styles = StyleSheet.create({
   },
   colorPickerContainer: {
     position: "absolute",
-    bottom: 100,
+    bottom: 120,
     right: 20,
-    backgroundColor: "rgba(0,0,0,0.8)",
-    padding: 10,
-    borderRadius: 10,
-    zIndex: 1000,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    padding: 15,
+    borderRadius: 15,
+    zIndex: 2000,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   patternPickerContainer: {
     position: "absolute",
@@ -479,6 +494,58 @@ const styles = StyleSheet.create({
     height: 40,
     backgroundColor: "#fff",
   },
+  patternModal: {
+    position: "absolute",
+    bottom: 60,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    padding: 15,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+    zIndex: 1000,
+  },
+  patternGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 10,
+  },
+  patternButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    margin: 5,
+  },
+  patternIcon: {
+    color: "#fff",
+    fontSize: 24,
+  },
+  colorPicker: {
+    position: "absolute",
+    bottom: 80,
+    right: 20,
+    backgroundColor: "white",
+    padding: 10,
+    borderRadius: 10,
+    elevation: 5,
+  },
+  colorGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    width: 160,
+  },
+  colorOption: {
+    width: 30,
+    height: 30,
+    margin: 5,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: "#ccc",
+  },
 });
 
 export default function DrawScreen() {
@@ -496,20 +563,19 @@ export default function DrawScreen() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [undoStack, setUndoStack] = useState([]);
   const [backgroundColor, setBackgroundColor] = useState("#FFFFFF");
-  const [isBackgroundPickerVisible, setIsBackgroundPickerVisible] =
-    useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const [backgroundPattern, setBackgroundPattern] = useState(null);
   const [isPatternPickerVisible, setIsPatternPickerVisible] = useState(false);
   const viewShotRef = useRef();
   const canvasRef = useRef(null);
   const db = getFirestore();
-  const auth = getAuth();
   const [isShapePickerVisible, setIsShapePickerVisible] = useState(false);
   const [isBrushSizePickerVisible, setIsBrushSizePickerVisible] =
     useState(false);
   const [isColorPickerVisible, setIsColorPickerVisible] = useState(false);
   const [isOpacityPickerVisible, setIsOpacityPickerVisible] = useState(false);
   const [opacity, setOpacity] = useState(1);
+  const auth = getAuth();
 
   const colors = [
     "#FF0000", // Kırmızı
@@ -790,17 +856,18 @@ export default function DrawScreen() {
 
       const drawingsCollection = collection(db, "drawings");
       const docRef = await addDoc(drawingsCollection, drawingData);
-      if (!docRef) {
+
+      if (docRef) {
+        Alert.alert("Başarılı", "Çiziminiz başarıyla kaydedildi");
+        setDrawingName("");
+        setIsModalVisible(false);
+        navigation.navigate("CreateStory", {
+          drawingData: base64Data,
+          drawingName: drawingName,
+        });
+      } else {
         throw new Error("Firestore'a kaydedilemedi");
       }
-
-      Alert.alert("Başarılı", "Çiziminiz başarıyla kaydedildi");
-      setDrawingName("");
-      setIsModalVisible(false);
-      navigation.navigate("CreateStory", {
-        drawingData: base64Data,
-        drawingName: drawingName,
-      });
     } catch (error) {
       console.error("Kaydetme hatası:", error);
       Alert.alert(
@@ -810,9 +877,9 @@ export default function DrawScreen() {
     }
   };
 
-  const handleBackgroundColorChange = (color) => {
+  const handleBackgroundColorSelect = (color) => {
     setBackgroundColor(color);
-    setIsBackgroundPickerVisible(false);
+    setShowColorPicker(false);
   };
 
   const handlePatternChange = (pattern) => {
@@ -1089,16 +1156,20 @@ export default function DrawScreen() {
       case PATTERN_TYPES.BUBBLES:
         return (
           <View style={[patternStyle, { backgroundColor: "transparent" }]}>
-            {Array.from({ length: 40 }).map((_, i) => (
+            {Array.from({ length: 20 }).map((_, i) => (
               <View
                 key={i}
                 style={[
-                  styles.bubble,
                   {
+                    position: "absolute",
+                    width: 20,
+                    height: 20,
+                    borderRadius: 10,
                     left: `${Math.random() * 100}%`,
                     top: `${Math.random() * 100}%`,
                     backgroundColor:
                       colors[Math.floor(Math.random() * colors.length)],
+                    opacity: 0.7,
                   },
                 ]}
               />
@@ -1656,11 +1727,9 @@ export default function DrawScreen() {
             style={[
               styles.actionButton,
               styles.fillButton,
-              isBackgroundPickerVisible && styles.activeTool,
+              showColorPicker && styles.activeTool,
             ]}
-            onPress={() =>
-              setIsBackgroundPickerVisible(!isBackgroundPickerVisible)
-            }
+            onPress={() => setShowColorPicker(!showColorPicker)}
           >
             <MaterialCommunityIcons
               name="format-color-fill"
@@ -1727,18 +1796,18 @@ export default function DrawScreen() {
         </View>
       </Modal>
 
-      {isBackgroundPickerVisible && (
-        <View style={styles.colorPickerContainer}>
-          <View style={styles.colorPalette}>
+      {showColorPicker && (
+        <View style={styles.colorPicker}>
+          <View style={styles.colorGrid}>
             {colors.map((color, index) => (
               <TouchableOpacity
                 key={index}
                 style={[
-                  styles.colorButton,
+                  styles.colorOption,
                   { backgroundColor: color },
                   backgroundColor === color && styles.selectedColor,
                 ]}
-                onPress={() => handleBackgroundColorChange(color)}
+                onPress={() => handleBackgroundColorSelect(color)}
               />
             ))}
           </View>
@@ -1757,107 +1826,11 @@ export default function DrawScreen() {
                 ]}
                 onPress={() => handlePatternChange(value)}
               >
-                {value === PATTERN_TYPES.NONE ? (
-                  <MaterialCommunityIcons name="close" size={24} color="#fff" />
-                ) : value === PATTERN_TYPES.GRID ? (
-                  <View style={styles.patternPreview}>
-                    <View style={[styles.previewLine, { top: 20 }]} />
-                    <View
-                      style={[
-                        styles.previewLine,
-                        { left: 20, transform: [{ rotate: "90deg" }] },
-                      ]}
-                    />
-                  </View>
-                ) : value === PATTERN_TYPES.DOTS ? (
-                  <View style={styles.patternPreview}>
-                    <View style={[styles.previewDot, { left: 10, top: 10 }]} />
-                    <View style={[styles.previewDot, { left: 20, top: 20 }]} />
-                    <View style={[styles.previewDot, { left: 30, top: 10 }]} />
-                  </View>
-                ) : value === PATTERN_TYPES.LINES ? (
-                  <View style={styles.patternPreview}>
-                    <View
-                      style={[
-                        styles.previewLine,
-                        { left: 5, top: 20, transform: [{ rotate: "45deg" }] },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.previewLine,
-                        { left: 5, top: 20, transform: [{ rotate: "-45deg" }] },
-                      ]}
-                    />
-                  </View>
-                ) : value === PATTERN_TYPES.CIRCLES ? (
-                  <View style={styles.patternPreview}>
-                    <View
-                      style={[styles.previewCircle, { left: 10, top: 10 }]}
-                    />
-                    <View
-                      style={[styles.previewCircle, { left: 20, top: 20 }]}
-                    />
-                  </View>
-                ) : value === PATTERN_TYPES.SQUARES ? (
-                  <View style={styles.patternPreview}>
-                    <View
-                      style={[styles.previewSquare, { left: 10, top: 10 }]}
-                    />
-                    <View
-                      style={[styles.previewSquare, { left: 20, top: 20 }]}
-                    />
-                  </View>
-                ) : value === PATTERN_TYPES.TRIANGLES ? (
-                  <View style={styles.patternPreview}>
-                    <View
-                      style={[styles.previewTriangle, { left: 10, top: 10 }]}
-                    />
-                    <View
-                      style={[styles.previewTriangle, { left: 20, top: 20 }]}
-                    />
-                  </View>
-                ) : value === PATTERN_TYPES.STARS ? (
-                  <MaterialCommunityIcons name="star" size={24} color="#fff" />
-                ) : value === PATTERN_TYPES.HEARTS ? (
-                  <MaterialCommunityIcons name="heart" size={24} color="#fff" />
-                ) : value === PATTERN_TYPES.CLOUDS ? (
-                  <MaterialCommunityIcons
-                    name="weather-cloudy"
-                    size={24}
-                    color="#fff"
-                  />
-                ) : value === PATTERN_TYPES.FLOWERS ? (
-                  <MaterialCommunityIcons
-                    name="flower"
-                    size={24}
-                    color="#fff"
-                  />
-                ) : value === PATTERN_TYPES.BUTTERFLIES ? (
-                  <MaterialCommunityIcons
-                    name="butterfly"
-                    size={24}
-                    color="#fff"
-                  />
-                ) : value === PATTERN_TYPES.RAINBOW ? (
-                  <MaterialCommunityIcons
-                    name="rainbow"
-                    size={24}
-                    color="#fff"
-                  />
-                ) : value === PATTERN_TYPES.BUBBLES ? (
-                  <View style={styles.patternPreview}>
-                    <View
-                      style={[styles.previewBubble, { left: 10, top: 10 }]}
-                    />
-                    <View
-                      style={[styles.previewBubble, { left: 20, top: 20 }]}
-                    />
-                    <View
-                      style={[styles.previewBubble, { left: 30, top: 10 }]}
-                    />
-                  </View>
-                ) : null}
+                <MaterialCommunityIcons
+                  name={getPatternIcon(value)}
+                  size={24}
+                  color="#fff"
+                />
               </TouchableOpacity>
             ))}
           </View>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   View,
@@ -13,8 +13,9 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { auth } from "../config/firebase";
+import { auth, db } from "../config/firebase";
 import { signOut, updateEmail, updatePassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 const { width } = Dimensions.get("window");
 
@@ -24,6 +25,8 @@ export default function ProfileScreen() {
   const [email, setEmail] = useState(auth.currentUser?.email || "");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const profileItems = [
     {
@@ -122,6 +125,32 @@ export default function ProfileScreen() {
     },
   ];
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            console.log("Firestore'dan gelen kullanıcı verisi:", data); // Debug için
+            setUserData(data);
+          } else {
+            console.log("Kullanıcı dokümanı bulunamadı"); // Debug için
+          }
+        } else {
+          console.log("Giriş yapmış kullanıcı bulunamadı"); // Debug için
+        }
+      } catch (error) {
+        console.error("Kullanıcı bilgileri alınamadı:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
   const handleSignOut = async () => {
     try {
       await signOut(auth);
@@ -147,6 +176,16 @@ export default function ProfileScreen() {
       Alert.alert("Hata", error.message);
     }
   };
+
+  if (loading) {
+    return (
+      <LinearGradient colors={["#2E7D32", "#1B5E20"]} style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Yükleniyor...</Text>
+        </View>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient colors={["#2E7D32", "#1B5E20"]} style={styles.container}>
@@ -183,7 +222,9 @@ export default function ProfileScreen() {
 
           <View style={styles.profileRight}>
             <View style={styles.usernameContainer}>
-              <Text style={styles.username}>Kullanıcı Adı</Text>
+              <Text style={styles.username}>
+                {userData?.username || "Kullanıcı"}
+              </Text>
               <TouchableOpacity style={styles.editInfoButton}>
                 <MaterialCommunityIcons name="pencil" size={16} color="#fff" />
               </TouchableOpacity>
@@ -595,5 +636,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#fff",
     marginLeft: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    color: "#fff",
+    fontSize: 16,
   },
 });

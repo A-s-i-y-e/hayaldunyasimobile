@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import {
   getFirestore,
   collection,
@@ -21,10 +22,13 @@ import {
   getDocs,
   doc,
   deleteDoc,
+  addDoc,
+  getDoc,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 export default function CreateStoryScreen({ route }) {
+  const navigation = useNavigation();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
@@ -40,6 +44,7 @@ export default function CreateStoryScreen({ route }) {
     align: "left",
   });
   const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const db = getFirestore();
   const auth = getAuth();
@@ -63,14 +68,14 @@ export default function CreateStoryScreen({ route }) {
   ];
 
   useEffect(() => {
-    if (route.params?.drawingData) {
+    if (route?.params?.drawingData) {
       setDrawing({
         imageData: route.params.drawingData,
-        name: route.params.drawingName,
+        name: route.params.drawingName || "İsimsiz Çizim",
       });
     }
     fetchDrawings();
-  }, [route.params]);
+  }, [route?.params]);
 
   const fetchDrawings = async () => {
     try {
@@ -115,6 +120,7 @@ export default function CreateStoryScreen({ route }) {
   };
 
   const handleUseDrawing = (drawing) => {
+    console.log("Seçilen çizim:", drawing);
     setSelectedDrawing(drawing);
     Alert.alert(
       "Çizim Seçildi",
@@ -127,7 +133,13 @@ export default function CreateStoryScreen({ route }) {
         {
           text: "Kullan",
           onPress: () => {
-            // Çizimi hikaye oluşturmada kullan
+            console.log("Çizim kullanılıyor:", drawing);
+            const drawingData = {
+              imageData: drawing.imageData,
+              name: drawing.name,
+            };
+            console.log("Oluşturulan drawingData:", drawingData);
+            setDrawing(drawingData);
             setTitle(drawing.name);
             Alert.alert("Başarılı", "Çizim hikayenize eklendi");
           },
@@ -179,17 +191,62 @@ export default function CreateStoryScreen({ route }) {
     }));
   };
 
-  const handleCreateStory = () => {
-    if (!title || !content || !category) {
+  const handleSaveStory = async () => {
+    if (!title || !category || !content) {
       Alert.alert("Hata", "Lütfen tüm alanları doldurun");
       return;
     }
 
-    // Hikaye oluşturma işlemi burada yapılacak
-    Alert.alert("Başarılı", "Hikaye başarıyla oluşturuldu");
-    setTitle("");
-    setContent("");
-    setCategory("");
+    setLoading(true);
+
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error("Kullanıcı bulunamadı");
+      }
+
+      // Kullanıcı bilgilerini al
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      const userData = userDoc.data();
+
+      let drawingData = null;
+      if (selectedDrawing) {
+        // Resim verisi formatını standardize et
+        let imageData = selectedDrawing.imageData;
+        if (typeof imageData === "string") {
+          if (!imageData.startsWith("data:image")) {
+            // Base64 verisini düzgün formata dönüştür
+            imageData = `data:image/png;base64,${imageData.replace(/\n/g, "")}`;
+          }
+        }
+
+        drawingData = {
+          imageData: imageData,
+          name: selectedDrawing.name,
+        };
+      }
+
+      const storyData = {
+        title,
+        category,
+        content,
+        author: userData?.username || "Kullanıcı",
+        userId: user.uid,
+        createdAt: new Date(),
+        likes: 0,
+        comments: [],
+        drawing: drawingData,
+      };
+
+      await addDoc(collection(db, "stories"), storyData);
+      Alert.alert("Başarılı", "Hikaye başarıyla kaydedildi");
+      navigation.goBack();
+    } catch (error) {
+      console.error("Hikaye kaydedilirken hata:", error);
+      Alert.alert("Hata", "Hikaye kaydedilirken bir hata oluştu");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCategorySelect = (selectedCategory) => {
@@ -253,6 +310,18 @@ export default function CreateStoryScreen({ route }) {
     </View>
   );
 
+  const filteredDrawings = drawings.filter((drawing) => {
+    const query = searchQuery?.toLowerCase() || "";
+    const name = drawing.name?.toLowerCase() || "";
+    return name.includes(query);
+  });
+
+  const filteredCategories = categories.filter((category) => {
+    const query = searchQuery?.toLowerCase() || "";
+    const name = category.name?.toLowerCase() || "";
+    return name.includes(query);
+  });
+
   return (
     <LinearGradient colors={["#2E7D32", "#1B5E20"]} style={styles.container}>
       <View style={styles.header}>
@@ -280,9 +349,7 @@ export default function CreateStoryScreen({ route }) {
           </View>
         </View>
         <FlatList
-          data={drawings.filter((drawing) =>
-            drawing.name.toLowerCase().includes(searchQuery.toLowerCase())
-          )}
+          data={filteredDrawings}
           renderItem={renderDrawingItem}
           keyExtractor={(item) => item.id}
           numColumns={3}
@@ -399,10 +466,7 @@ export default function CreateStoryScreen({ route }) {
           />
         </View>
 
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={handleCreateStory}
-        >
+        <TouchableOpacity style={styles.createButton} onPress={handleSaveStory}>
           <MaterialCommunityIcons name="plus" size={24} color="#fff" />
           <Text style={styles.createButtonText}>Hikaye Oluştur</Text>
         </TouchableOpacity>
@@ -427,7 +491,7 @@ export default function CreateStoryScreen({ route }) {
             </View>
             <ScrollView style={styles.categoryList}>
               <View style={styles.categoryGrid}>
-                {categories.map((cat) => (
+                {filteredCategories.map((cat) => (
                   <TouchableOpacity
                     key={cat.id}
                     style={[
