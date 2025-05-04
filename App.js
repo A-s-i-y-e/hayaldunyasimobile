@@ -21,6 +21,7 @@ import StoriesScreen from "./screens/StoriesScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import GamesScreen from "./screens/GamesScreen";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { VoiceProvider } from "./contexts/VoiceContext";
 import ProfileInfoScreen from "./screens/ProfileInfoScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 import StatisticsScreen from "./screens/StatisticsScreen";
@@ -39,6 +40,7 @@ import NumberGameScreen from "./screens/NumberGameScreen";
 import PuzzleScreen from "./screens/PuzzleScreen";
 import MyStoriesScreen from "./screens/MyStoriesScreen";
 import EditStoryScreen from "./screens/EditStoryScreen";
+import VoiceRecorderScreen from "./screens/VoiceRecorderScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -71,6 +73,7 @@ function Navigation() {
       <Stack.Screen name="StoryDetail" component={StoryDetailScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Games" component={GamesScreen} />
+      <Stack.Screen name="VoiceRecorder" component={VoiceRecorderScreen} />
       {user && (
         <>
           <Stack.Screen name="ProfileInfo" component={ProfileInfoScreen} />
@@ -98,10 +101,12 @@ function Navigation() {
 export default function App() {
   return (
     <AuthProvider>
-      <NavigationContainer>
-        <StatusBar style="light" />
-        <Navigation />
-      </NavigationContainer>
+      <VoiceProvider>
+        <NavigationContainer>
+          <StatusBar style="light" />
+          <Navigation />
+        </NavigationContainer>
+      </VoiceProvider>
     </AuthProvider>
   );
 }

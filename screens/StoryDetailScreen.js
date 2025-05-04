@@ -21,12 +21,14 @@ import {
   increment,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { useVoice } from "../contexts/VoiceContext";
 
 const { width } = Dimensions.get("window");
 
 export default function StoryDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const { playRecording, isPlaying, stopPlaying } = useVoice();
   const [story, setStory] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
@@ -135,6 +137,14 @@ export default function StoryDetailScreen() {
       });
     } catch (error) {
       console.error("Beğeni işlemi sırasında hata:", error);
+    }
+  };
+
+  const handlePlayAudio = () => {
+    if (isPlaying) {
+      stopPlaying();
+    } else {
+      playRecording(story.audio);
     }
   };
 
@@ -288,6 +298,27 @@ export default function StoryDetailScreen() {
               <Text style={styles.readButtonText}>Okudum</Text>
             </TouchableOpacity>
           )}
+
+          {story.hasAudio && (
+            <TouchableOpacity
+              style={[styles.audioButton, isPlaying && styles.playingButton]}
+              onPress={handlePlayAudio}
+            >
+              <MaterialCommunityIcons
+                name={isPlaying ? "stop" : "play"}
+                size={24}
+                color={story.textColor || "#000"}
+              />
+              <Text
+                style={[
+                  styles.audioButtonText,
+                  { color: story.textColor || "#000" },
+                ]}
+              >
+                {isPlaying ? "Sesi Durdur" : "Hikayeyi Dinle"}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </LinearGradient>
@@ -386,5 +417,26 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  audioButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    padding: 15,
+    borderRadius: 10,
+    marginTop: 20,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  playingButton: {
+    backgroundColor: "#e3f2fd",
+  },
+  audioButtonText: {
+    marginLeft: 10,
+    fontSize: 16,
   },
 });

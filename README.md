@@ -115,12 +115,21 @@
   - Hikaye düzenleme araçları
   - Hikaye şablonları
 
+### 9. Hafta ✅
+
+- Ses özellikleri eklendi:
+  - Ses kayıt arayüzü
+  - Ses düzenleme araçları
+  - Ses efektleri
+  - Ses senkronizasyonu
+  - Ses dosyası yönetimi
+  - VoiceRecorderScreen oluşturuldu
+  - Ses kayıt ve oynatma fonksiyonları eklendi
+  - Ses dosyalarının Firebase Storage'a yüklenmesi
+  - Ses dosyalarının hikayelerle entegrasyonu
+
 ### Yapılacaklar 🚀
 
-- Ses kayıt sistemi
-- Hikaye paylaşım seçenekleri
-- Karakter animasyonları
-- Arka plan efektleri
 - Yapay zeka entegrasyonu
 - Ebeveyn kontrol paneli
 - Test ve optimizasyonlar

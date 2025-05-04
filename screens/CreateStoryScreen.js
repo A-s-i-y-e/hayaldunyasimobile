@@ -26,9 +26,12 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { useVoice } from "../contexts/VoiceContext";
 
 export default function CreateStoryScreen({ route }) {
   const navigation = useNavigation();
+  const { isRecording, startRecording, stopRecording, recordedAudio } =
+    useVoice();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
@@ -45,6 +48,7 @@ export default function CreateStoryScreen({ route }) {
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isRecordingStory, setIsRecordingStory] = useState(false);
 
   const db = getFirestore();
   const auth = getAuth();
@@ -236,6 +240,8 @@ export default function CreateStoryScreen({ route }) {
         likes: 0,
         comments: [],
         drawing: drawingData,
+        audio: recordedAudio,
+        hasAudio: !!recordedAudio,
       };
 
       await addDoc(collection(db, "stories"), storyData);
@@ -321,6 +327,34 @@ export default function CreateStoryScreen({ route }) {
     const name = category.name?.toLowerCase() || "";
     return name.includes(query);
   });
+
+  const handleRecordStory = () => {
+    if (isRecordingStory) {
+      stopRecording();
+      setIsRecordingStory(false);
+    } else {
+      startRecording();
+      setIsRecordingStory(true);
+    }
+  };
+
+  const renderVoiceControls = () => (
+    <View style={styles.voiceControls}>
+      <TouchableOpacity
+        style={[styles.voiceButton, isRecordingStory && styles.recordingButton]}
+        onPress={handleRecordStory}
+      >
+        <MaterialCommunityIcons
+          name={isRecordingStory ? "stop" : "microphone"}
+          size={24}
+          color={isRecordingStory ? "#ff4444" : "#4CAF50"}
+        />
+        <Text style={styles.voiceButtonText}>
+          {isRecordingStory ? "Kaydı Durdur" : "Sesli Hikaye Kaydet"}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <LinearGradient colors={["#2E7D32", "#1B5E20"]} style={styles.container}>
@@ -522,6 +556,8 @@ export default function CreateStoryScreen({ route }) {
           </View>
         </View>
       </Modal>
+
+      {renderVoiceControls()}
     </LinearGradient>
   );
 }
@@ -868,5 +904,29 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5F5F5",
     borderWidth: 2,
     borderColor: "#E0E0E0",
+  },
+  voiceControls: {
+    marginVertical: 10,
+    alignItems: "center",
+  },
+  voiceButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    padding: 15,
+    borderRadius: 10,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  recordingButton: {
+    backgroundColor: "#ffebee",
+  },
+  voiceButtonText: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: "#333",
   },
 });
