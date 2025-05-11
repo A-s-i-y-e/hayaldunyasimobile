@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
+import * as tf from "@tensorflow/tfjs";
+import { bundleResourceIO } from "@tensorflow/tfjs-react-native";
 import {
   StyleSheet,
   Text,
@@ -99,6 +101,19 @@ function Navigation() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const initializeTensorFlow = async () => {
+      try {
+        await tf.ready();
+        console.log("TensorFlow.js is ready");
+      } catch (error) {
+        console.error("Error initializing TensorFlow.js:", error);
+      }
+    };
+
+    initializeTensorFlow();
+  }, []);
+
   return (
     <AuthProvider>
       <VoiceProvider>

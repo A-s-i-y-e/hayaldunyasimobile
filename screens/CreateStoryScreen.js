@@ -49,6 +49,12 @@ export default function CreateStoryScreen({ route }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [isRecordingStory, setIsRecordingStory] = useState(false);
+  const [isAIAnalysisModalVisible, setIsAIAnalysisModalVisible] =
+    useState(false);
+  const [aiAnalysis, setAIAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [enhancedDrawing, setEnhancedDrawing] = useState(null);
+  const [selectedStyle, setSelectedStyle] = useState(null);
 
   const db = getFirestore();
   const auth = getAuth();
@@ -195,6 +201,37 @@ export default function CreateStoryScreen({ route }) {
     }));
   };
 
+  const handleStorySelect = (story) => {
+    // Hikaye içeriğini düzenle
+    const formattedStory = story.fullStory
+      .replace(/\n\s*\n/g, "\n") // Fazla boş satırları temizle
+      .trim(); // Baştaki ve sondaki boşlukları temizle
+
+    setContent(formattedStory);
+    setTitle(story.title);
+
+    // Hikaye türüne göre kategori seçimi
+    const categoryMapping = {
+      Macera: "Macera",
+      Aile: "Aile",
+      Doğa: "Doğa",
+      Fantastik: "Fantastik",
+      Bilim: "Bilim",
+      Müzik: "Müzik",
+      Sanat: "Sanat",
+      Spor: "Spor",
+      Okul: "Okul",
+      Hayvanlar: "Hayvanlar",
+      Uzay: "Uzay",
+      Masal: "Masal",
+      Oyun: "Oyun",
+      "Hayal Gücü": "Hayal Gücü",
+    };
+
+    setCategory(categoryMapping[story.type] || story.type);
+    setIsAIAnalysisModalVisible(false);
+  };
+
   const handleSaveStory = async () => {
     if (!title || !category || !content) {
       Alert.alert("Hata", "Lütfen tüm alanları doldurun");
@@ -224,32 +261,46 @@ export default function CreateStoryScreen({ route }) {
           }
         }
 
+        // Çizim verilerini kontrol et ve varsayılan değerler ata
         drawingData = {
-          imageData: imageData,
-          name: selectedDrawing.name,
+          imageData: imageData || "",
+          name: selectedDrawing.name || "İsimsiz Çizim",
+          id: selectedDrawing.id || "",
+          createdAt: selectedDrawing.createdAt || new Date(),
         };
       }
 
+      // Hikaye içeriğini düzenle
+      const formattedContent = content.replace(/\n\s*\n/g, "\n").trim();
+
       const storyData = {
-        title,
-        category,
-        content,
+        title: title.trim(),
+        category: category.trim(),
+        content: formattedContent,
         author: userData?.username || "Kullanıcı",
         userId: user.uid,
         createdAt: new Date(),
         likes: 0,
         comments: [],
         drawing: drawingData,
-        audio: recordedAudio,
+        audio: recordedAudio || null,
         hasAudio: !!recordedAudio,
       };
+
+      // Veriyi kaydetmeden önce kontrol et
+      if (drawingData && (!drawingData.imageData || !drawingData.name)) {
+        throw new Error("Çizim verileri eksik");
+      }
 
       await addDoc(collection(db, "stories"), storyData);
       Alert.alert("Başarılı", "Hikaye başarıyla kaydedildi");
       navigation.goBack();
     } catch (error) {
       console.error("Hikaye kaydedilirken hata:", error);
-      Alert.alert("Hata", "Hikaye kaydedilirken bir hata oluştu");
+      Alert.alert(
+        "Hata",
+        "Hikaye kaydedilirken bir hata oluştu: " + error.message
+      );
     } finally {
       setLoading(false);
     }
@@ -356,10 +407,213 @@ export default function CreateStoryScreen({ route }) {
     </View>
   );
 
+  const handleAIAnalysis = async () => {
+    if (!selectedDrawing) {
+      Alert.alert("Uyarı", "Lütfen önce bir çizim seçin");
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setIsAIAnalysisModalVisible(true);
+
+    try {
+      setTimeout(() => {
+        const analysis = {
+          title: "Çizim Analizi",
+          description: "Bu çizimde gördüğüm öğeler:",
+          elements: ["Güneş", "Ağaçlar", "Ev", "Çiçekler"],
+          storyAnalysis: {
+            mood: "Neşeli ve huzurlu",
+            theme: "Doğa ve aile",
+            potentialCharacters: [
+              "Küçük bir çocuk",
+              "Aile üyeleri",
+              "Orman hayvanları",
+            ],
+            suggestedSettings: [
+              "Güneşli bir yaz günü",
+              "Orman kenarında bir ev",
+              "Çiçekli bir bahçe",
+            ],
+          },
+          storySuggestions: [
+            {
+              id: 1,
+              title: "Ormanın Sırrı",
+              type: "Macera",
+              description:
+                "Güneşli bir günde ormanda geçen bir macera hikayesi",
+              outline: [
+                "Küçük çocuk ormanda yeni bir yol keşfeder",
+                "Yolda farklı hayvanlarla tanışır",
+                "Birlikte ormanın sırrını çözerler",
+              ],
+              keywords: ["macera", "keşif", "arkadaşlık", "doğa"],
+              fullStory: `Güneş, ormanın üzerine altın sarısı ışıklarını saçarken, küçük Ali evlerinin arka bahçesindeki ağaçların arasında yeni bir patika keşfetti. Bu patika, daha önce hiç görmediği bir yere gidiyordu.
+
+"Acaba bu yol nereye çıkar?" diye düşündü Ali. Merakına yenik düşerek, patikada ilerlemeye başladı. Yol, onu gittikçe ormanın derinliklerine götürüyordu.
+
+Yürürken, bir sincap ile karşılaştı. Sincap, Ali'yi görünce korkmadı, hatta ona doğru yaklaştı. "Merhaba!" dedi Ali. "Benimle arkadaş olmak ister misin?"
+
+Sincap, Ali'nin omzuna çıktı ve birlikte yürümeye başladılar. Biraz ilerledikten sonra, bir tavşan ile karşılaştılar. Tavşan da onlara katıldı. Üç arkadaş, ormanın derinliklerine doğru ilerlerken, eski bir ağaç kovuğu gördüler.
+
+Kovuğun içinde parlayan bir şey vardı. Ali, kovuğa yaklaştı ve içindeki şeyi aldı. Bu, eski bir anahtardı. Anahtarın üzerinde "Ormanın Kalbi" yazıyordu.
+
+"Bu anahtar ne işe yarar acaba?" diye düşündü Ali. Sincap ve tavşan da merakla anahtara bakıyorlardı. Birlikte ormanın kalbini bulmaya karar verdiler.
+
+Yolculukları sırasında birçok hayvanla tanıştılar ve hepsi onlara yardım etti. Sonunda, ormanın en yaşlı ağacının yanına geldiler. Ağacın gövdesinde bir kapı vardı.
+
+Ali, anahtarı kapıya soktu ve döndürdü. Kapı açıldığında, içeride ormanın tüm hayvanları bir araya gelmiş, bir şenlik düzenliyorlardı. Bu, ormanın en büyük sırrıydı: Tüm hayvanlar birbirleriyle arkadaştı ve her gece burada buluşuyorlardı.
+
+Ali ve yeni arkadaşları, şenliğe katıldılar. O gece, ormanın en güzel gecesi oldu. Ali, artık ormanın bir parçası olduğunu hissetti ve her gün yeni arkadaşlarıyla buluşmaya devam etti.`,
+            },
+            {
+              id: 2,
+              title: "Evimiz",
+              type: "Aile",
+              description: "Doğa ile iç içe yaşayan bir ailenin hikayesi",
+              outline: [
+                "Aile orman kenarında yaşar",
+                "Her gün yeni bir doğa olayına tanık olurlar",
+                "Birlikte bahçe bakımı yaparlar",
+              ],
+              keywords: ["aile", "doğa", "huzur", "birlik"],
+              fullStory: `Yaz sabahı, güneş ışıkları pencereden içeri süzülürken, Ayşe'nin ailesi uyanmaya başladı. Onlar, ormanın kenarında, çiçeklerle dolu bir bahçeye sahip evlerinde yaşıyorlardı.
+
+"Günaydın!" dedi anne, kahvaltı masasında. "Bugün bahçede neler yapmak istersiniz?"
+
+"Ben çiçekleri sulayacağım!" dedi Ayşe heyecanla.
+"Ben de ağaçları budayacağım," dedi baba.
+"Ben de size yardım edeceğim," dedi anne gülümseyerek.
+
+Kahvaltıdan sonra, hep birlikte bahçeye çıktılar. Bahçe, rengârenk çiçeklerle doluydu. Güller, papatyalar, laleler... Her biri kendi güzelliğini sergiliyordu.
+
+Ayşe, çiçekleri sularken, bir kelebek gördü. Kelebek, onun omzuna kondu. "Merhaba!" dedi Ayşe. "Sen de mi bahçemizi beğendin?"
+
+Baba ağaçları budarken, bir sincap ağacın tepesinden onu izliyordu. Sincap, düşen dalları toplayıp yuvasına götürüyordu. "Teşekkür ederim!" dedi sincap, "Bu dallar tam ihtiyacım olan şey!"
+
+Anne, sebze bahçesinde domatesleri toplarken, bir tavşan yavrusu ile karşılaştı. Tavşan, annesinin yanına koştu. "Anne, bu insanlar çok iyi!" dedi.
+
+Öğle vakti, aile bahçedeki masada yemeklerini yerken, tüm hayvanlar onları izliyordu. Kuşlar şarkı söylüyor, arılar çiçeklerden bal topluyor, kelebekler dans ediyordu.
+
+"Bizim evimiz sadece bir ev değil," dedi anne. "Bu, tüm canlıların bir arada yaşadığı bir yuva."
+
+Ayşe, bu sözleri duyunca çok mutlu oldu. Evleri, gerçekten de öyleydi. Ormanın kenarında, doğa ile iç içe, tüm canlılarla birlikte yaşadıkları bir yuva.
+
+Akşam olduğunda, güneş batarken, aile bahçedeki bankta oturup günün güzelliklerini konuştu. Ayşe, o gün öğrendiği en önemli şeyi anladı: Gerçek bir ev, sadece dört duvar değil, içinde yaşayan tüm canlıların mutlu olduğu bir yerdi.`,
+            },
+            {
+              id: 3,
+              title: "Baharın Gelişi",
+              type: "Doğa",
+              description: "Bahar mevsiminde açan çiçeklerin hikayesi",
+              outline: [
+                "Kış sona erer ve bahar gelir",
+                "Çiçekler açmaya başlar",
+                "Doğa yeniden canlanır",
+              ],
+              keywords: ["mevsimler", "çiçekler", "değişim", "yenilenme"],
+              fullStory: `Kış, son günlerini yaşıyordu. Kar taneleri yavaşça erirken, toprak altında bir hareketlenme başladı. Çiçek tohumları uyanmaya başlamıştı.
+
+"Uyanma vakti geldi!" dedi küçük lale tohumu.
+"Evet, bahar geliyor!" dedi papatya tohumu.
+"Ben de uyanmak istiyorum!" dedi gül tohumu.
+
+Tohumlar, toprağın altında birbirleriyle konuşuyordu. Her biri, baharın gelişini bekliyordu. Güneş, her gün biraz daha güçleniyor, toprağı ısıtıyordu.
+
+Bir sabah, lale tohumu ilk filizini verdi. "Bakın! Ben uyandım!" diye bağırdı. Filizi, toprağın üzerine çıktı ve güneşi gördü. "Ne kadar güzel!" dedi.
+
+Papatya tohumu da uyandı. Filizi, lalenin yanında büyümeye başladı. "Merhaba!" dedi laleye. "Birlikte büyüyelim!"
+
+Gül tohumu biraz daha bekledi. O, en son uyanan olmak istiyordu. "Ben de hazırım!" dedi bir sabah. Filizi, diğer çiçeklerin yanında boy gösterdi.
+
+Bahar rüzgârı estiğinde, çiçekler dans etmeye başladı. "Ne güzel bir dans!" dedi lale.
+"Evet, baharın dansı!" dedi papatya.
+"Ve biz de bu dansın bir parçasıyız!" dedi gül.
+
+Arılar ve kelebekler geldi. Çiçeklerin etrafında uçuşuyorlardı. "Merhaba!" dedi arılar.
+"Ne güzel kokuyorsunuz!" dedi kelebekler.
+
+Çiçekler, baharın gelişini kutluyordu. Her biri kendi rengini, kokusunu ve güzelliğini sergiliyordu. Lale kırmızı, papatya beyaz, gül ise pembe açmıştı.
+
+"Biz, baharın habercileriyiz!" dedi lale.
+"Ve doğanın güzelliğiyiz!" dedi papatya.
+"Birlikte, dünyayı güzelleştiriyoruz!" dedi gül.
+
+Bahar, tüm güzelliğiyle gelmişti. Çiçekler açmış, doğa yeniden canlanmıştı. Her şey, yeni bir başlangıcın mutluluğunu yaşıyordu.`,
+            },
+          ],
+          enhancementStyles: [
+            {
+              id: 1,
+              name: "Suluboya",
+              description: "Yumuşak ve akıcı renkler",
+              icon: "water",
+              preview: selectedDrawing.imageData, // Gerçek uygulamada AI tarafından oluşturulacak
+            },
+            {
+              id: 2,
+              name: "Pastel",
+              description: "Yumuşak ve pastel tonlar",
+              icon: "palette",
+              preview: selectedDrawing.imageData,
+            },
+            {
+              id: 3,
+              name: "Çizgi Roman",
+              description: "Bold ve canlı renkler",
+              icon: "comic-bubble",
+              preview: selectedDrawing.imageData,
+            },
+            {
+              id: 4,
+              name: "Piksel Art",
+              description: "Retro piksel tarzı",
+              icon: "grid",
+              preview: selectedDrawing.imageData,
+            },
+          ],
+        };
+        setAIAnalysis(analysis);
+        setIsAnalyzing(false);
+      }, 2000);
+    } catch (error) {
+      console.error("AI analizi sırasında hata:", error);
+      Alert.alert("Hata", "AI analizi sırasında bir hata oluştu");
+      setIsAnalyzing(false);
+      setIsAIAnalysisModalVisible(false);
+    }
+  };
+
+  const handleStyleSelect = (style) => {
+    setSelectedStyle(style);
+    // Gerçek uygulamada burada AI ile çizimi güzelleştirme işlemi yapılacak
+    setEnhancedDrawing(style.preview);
+  };
+
+  const handleApplyStyle = () => {
+    if (selectedStyle && enhancedDrawing) {
+      setDrawing({
+        ...drawing,
+        imageData: enhancedDrawing,
+      });
+      setIsAIAnalysisModalVisible(false);
+      Alert.alert("Başarılı", "Çiziminiz yeni stille güncellendi!");
+    }
+  };
+
   return (
     <LinearGradient colors={["#2E7D32", "#1B5E20"]} style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Hikaye Oluştur</Text>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleAIAnalysis}
+          >
+            <MaterialCommunityIcons name="robot" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.drawingsContainer}>
@@ -388,10 +642,11 @@ export default function CreateStoryScreen({ route }) {
           keyExtractor={(item) => item.id}
           numColumns={3}
           contentContainerStyle={styles.listContainer}
+          style={{ maxHeight: 200 }}
         />
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={true}>
         {selectedDrawing && (
           <View style={styles.selectedDrawingContainer}>
             <View style={styles.selectedDrawingPreview}>
@@ -557,6 +812,202 @@ export default function CreateStoryScreen({ route }) {
         </View>
       </Modal>
 
+      <Modal
+        visible={isAIAnalysisModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsAIAnalysisModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {isAnalyzing
+                  ? "AI Analizi Yapılıyor..."
+                  : "AI Analiz Sonuçları"}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setIsAIAnalysisModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <MaterialCommunityIcons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            {isAnalyzing ? (
+              <View style={styles.loadingContainer}>
+                <MaterialCommunityIcons
+                  name="robot"
+                  size={50}
+                  color="#4CAF50"
+                />
+                <Text style={styles.loadingText}>
+                  Çiziminiz analiz ediliyor...
+                </Text>
+              </View>
+            ) : aiAnalysis ? (
+              <ScrollView style={styles.analysisContent}>
+                <Text style={styles.analysisTitle}>{aiAnalysis.title}</Text>
+                <Text style={styles.analysisDescription}>
+                  {aiAnalysis.description}
+                </Text>
+
+                <View style={styles.analysisSection}>
+                  <Text style={styles.sectionTitle}>Tespit Edilen Öğeler:</Text>
+                  {aiAnalysis.elements.map((element, index) => (
+                    <View key={index} style={styles.elementItem}>
+                      <MaterialCommunityIcons
+                        name="check-circle"
+                        size={20}
+                        color="#4CAF50"
+                      />
+                      <Text style={styles.elementText}>{element}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.analysisSection}>
+                  <Text style={styles.sectionTitle}>Hikaye Analizi:</Text>
+                  <View style={styles.analysisCard}>
+                    <View style={styles.analysisRow}>
+                      <MaterialCommunityIcons
+                        name="emoticon-happy"
+                        size={24}
+                        color="#4CAF50"
+                      />
+                      <Text style={styles.analysisLabel}>Duygu:</Text>
+                      <Text style={styles.analysisValue}>
+                        {aiAnalysis.storyAnalysis.mood}
+                      </Text>
+                    </View>
+                    <View style={styles.analysisRow}>
+                      <MaterialCommunityIcons
+                        name="theme-light-dark"
+                        size={24}
+                        color="#4CAF50"
+                      />
+                      <Text style={styles.analysisLabel}>Tema:</Text>
+                      <Text style={styles.analysisValue}>
+                        {aiAnalysis.storyAnalysis.theme}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.subsectionTitle}>
+                    Potansiyel Karakterler:
+                  </Text>
+                  <View style={styles.tagContainer}>
+                    {aiAnalysis.storyAnalysis.potentialCharacters.map(
+                      (character, index) => (
+                        <View key={index} style={styles.tag}>
+                          <Text style={styles.tagText}>{character}</Text>
+                        </View>
+                      )
+                    )}
+                  </View>
+
+                  <Text style={styles.subsectionTitle}>Önerilen Mekanlar:</Text>
+                  <View style={styles.tagContainer}>
+                    {aiAnalysis.storyAnalysis.suggestedSettings.map(
+                      (setting, index) => (
+                        <View key={index} style={styles.tag}>
+                          <Text style={styles.tagText}>{setting}</Text>
+                        </View>
+                      )
+                    )}
+                  </View>
+                </View>
+
+                <View style={styles.analysisSection}>
+                  <Text style={styles.sectionTitle}>Hikaye Önerileri:</Text>
+                  {aiAnalysis.storySuggestions.map((story) => (
+                    <TouchableOpacity
+                      key={story.id}
+                      style={styles.storyCard}
+                      onPress={() => handleStorySelect(story)}
+                    >
+                      <View style={styles.storyHeader}>
+                        <Text style={styles.storyTitle}>{story.title}</Text>
+                        <View style={styles.storyType}>
+                          <Text style={styles.storyTypeText}>{story.type}</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.storyDescription}>
+                        {story.description}
+                      </Text>
+                      <View style={styles.outlineContainer}>
+                        {story.outline.map((point, index) => (
+                          <View key={index} style={styles.outlineItem}>
+                            <MaterialCommunityIcons
+                              name="chevron-right"
+                              size={20}
+                              color="#4CAF50"
+                            />
+                            <Text style={styles.outlineText}>{point}</Text>
+                          </View>
+                        ))}
+                      </View>
+                      <View style={styles.keywordContainer}>
+                        {story.keywords.map((keyword, index) => (
+                          <View key={index} style={styles.keyword}>
+                            <Text style={styles.keywordText}>#{keyword}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <View style={styles.analysisSection}>
+                  <Text style={styles.sectionTitle}>Çizim Güzelleştirme:</Text>
+                  <View style={styles.styleGrid}>
+                    {aiAnalysis.enhancementStyles.map((style) => (
+                      <TouchableOpacity
+                        key={style.id}
+                        style={[
+                          styles.styleItem,
+                          selectedStyle?.id === style.id &&
+                            styles.selectedStyle,
+                        ]}
+                        onPress={() => handleStyleSelect(style)}
+                      >
+                        <View style={styles.stylePreview}>
+                          <Image
+                            source={{ uri: style.preview }}
+                            style={styles.stylePreviewImage}
+                          />
+                          <View style={styles.styleOverlay}>
+                            <MaterialCommunityIcons
+                              name={style.icon}
+                              size={24}
+                              color="#fff"
+                            />
+                          </View>
+                        </View>
+                        <Text style={styles.styleName}>{style.name}</Text>
+                        <Text style={styles.styleDescription}>
+                          {style.description}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  {selectedStyle && (
+                    <TouchableOpacity
+                      style={styles.applyStyleButton}
+                      onPress={handleApplyStyle}
+                    >
+                      <Text style={styles.applyStyleButtonText}>
+                        {selectedStyle.name} Stilini Uygula
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </ScrollView>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+
       {renderVoiceControls()}
     </LinearGradient>
   );
@@ -571,6 +1022,9 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingHorizontal: 20,
     backgroundColor: "rgba(0,0,0,0.1)",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   title: {
     fontSize: 24,
@@ -580,6 +1034,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
+    backgroundColor: "rgba(0,0,0,0.05)",
   },
   inputContainer: {
     marginBottom: 20,
@@ -625,6 +1080,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.1)",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    maxHeight: 300,
   },
   drawingsHeader: {
     flexDirection: "row",
@@ -928,5 +1384,235 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontSize: 16,
     color: "#333",
+  },
+  headerButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  actionButton: {
+    padding: 10,
+    borderRadius: 20,
+    backgroundColor: "#4CAF50",
+    marginLeft: 10,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#424242",
+    textAlign: "center",
+  },
+  analysisContent: {
+    padding: 15,
+  },
+  analysisTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#424242",
+    marginBottom: 10,
+  },
+  analysisDescription: {
+    fontSize: 16,
+    color: "#666",
+    marginBottom: 20,
+  },
+  analysisSection: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#424242",
+    marginBottom: 10,
+  },
+  elementItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    backgroundColor: "#f5f5f5",
+    padding: 10,
+    borderRadius: 8,
+  },
+  elementText: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: "#424242",
+  },
+  analysisCard: {
+    backgroundColor: "#f5f5f5",
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 15,
+  },
+  analysisRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  analysisLabel: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#424242",
+    marginLeft: 10,
+    marginRight: 5,
+  },
+  analysisValue: {
+    fontSize: 16,
+    color: "#666",
+    flex: 1,
+  },
+  subsectionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#424242",
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  tagContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 15,
+  },
+  tag: {
+    backgroundColor: "#E8F5E9",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  tagText: {
+    color: "#2E7D32",
+    fontSize: 14,
+  },
+  storyCard: {
+    backgroundColor: "#f5f5f5",
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 15,
+  },
+  storyHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  storyTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#424242",
+    flex: 1,
+  },
+  storyType: {
+    backgroundColor: "#4CAF50",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+  },
+  storyTypeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  storyDescription: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 15,
+  },
+  outlineContainer: {
+    marginBottom: 15,
+  },
+  outlineItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  outlineText: {
+    fontSize: 14,
+    color: "#424242",
+    marginLeft: 5,
+  },
+  keywordContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  keyword: {
+    backgroundColor: "#E8F5E9",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  keywordText: {
+    color: "#2E7D32",
+    fontSize: 14,
+  },
+  styleGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+  styleItem: {
+    width: "48%",
+    backgroundColor: "#f5f5f5",
+    borderRadius: 12,
+    marginBottom: 15,
+    overflow: "hidden",
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  selectedStyle: {
+    borderColor: "#4CAF50",
+  },
+  stylePreview: {
+    width: "100%",
+    height: 120,
+    position: "relative",
+  },
+  stylePreviewImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  styleOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  styleName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#424242",
+    padding: 10,
+    paddingBottom: 5,
+  },
+  styleDescription: {
+    fontSize: 12,
+    color: "#666",
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+  },
+  applyStyleButton: {
+    backgroundColor: "#4CAF50",
+    padding: 15,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  applyStyleButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
