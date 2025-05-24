@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -6,11 +6,21 @@ import {
   TouchableOpacity,
   ImageBackground,
   ActivityIndicator,
+  Alert,
+  AppState,
+  BackHandler,
+  Platform,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { auth, db } from "./config/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import TimeLimitService from "./services/TimeLimitService";
 
 // Import screens
 import HomeScreen from "./screens/HomeScreen";
@@ -99,15 +109,93 @@ function Navigation() {
 }
 
 export default function App() {
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [appState, setAppState] = useState(AppState.currentState);
+  const navigationRef = useRef(null);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setUser(user);
+      setIsLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (appState.match(/inactive|background/) && nextAppState === "active") {
+        checkTimeLimit();
+      }
+      setAppState(nextAppState);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [appState]);
+
+  const checkTimeLimit = async () => {
+    if (!user) return;
+
+    try {
+      const userRef = doc(db, "parentalControls", user.uid);
+      const docSnap = await getDoc(userRef);
+
+      if (docSnap.exists() && docSnap.data().timeLimit) {
+        const timeLimitMinutes = docSnap.data().timeLimitMinutes || 60;
+        const lastActiveTime = new Date(docSnap.data().lastActiveTime);
+        const now = new Date();
+        const timeDiff = (now - lastActiveTime) / (1000 * 60); // dakika cinsinden fark
+
+        if (timeDiff >= timeLimitMinutes) {
+          Alert.alert(
+            "Zaman Sınırı",
+            "Günlük kullanım süreniz doldu. Ebeveyn paneline yönlendiriliyorsunuz.",
+            [
+              {
+                text: "Tamam",
+                onPress: () => {
+                  if (navigationRef.current) {
+                    navigationRef.current.reset({
+                      index: 0,
+                      routes: [{ name: "ParentalControl" }],
+                    });
+                  }
+                },
+              },
+            ]
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Zaman sınırı kontrolü sırasında hata:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (navigationRef.current) {
+      TimeLimitService.setNavigation(navigationRef.current);
+      TimeLimitService.startChecking();
+    }
+
+    return () => {
+      TimeLimitService.stopChecking();
+    };
+  }, [navigationRef.current]);
+
   return (
-    <AuthProvider>
-      <VoiceProvider>
-        <NavigationContainer>
-          <StatusBar style="light" />
-          <Navigation />
-        </NavigationContainer>
-      </VoiceProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <VoiceProvider>
+          <NavigationContainer ref={navigationRef}>
+            <StatusBar style="light" />
+            <Navigation />
+          </NavigationContainer>
+        </VoiceProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }
 

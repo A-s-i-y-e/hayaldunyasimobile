@@ -16,6 +16,14 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { auth, db } from "../config/firebase";
 import { signOut, updateEmail, updatePassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
 
 const { width } = Dimensions.get("window");
 
@@ -27,6 +35,19 @@ export default function ProfileScreen() {
   const [newPassword, setNewPassword] = useState("");
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [stories, setStories] = useState([]);
+  const [stats, setStats] = useState({
+    totalStories: 0,
+    totalDrawings: 0,
+    favoriteStories: 0,
+    lastActivity: null,
+  });
+  const [settings, setSettings] = useState({
+    notifications: true,
+    darkMode: false,
+    language: "tr",
+  });
 
   const profileItems = [
     {
@@ -71,60 +92,6 @@ export default function ProfileScreen() {
     },
   ];
 
-  const stats = [
-    {
-      id: 1,
-      title: "Hikayeler",
-      value: "12",
-      icon: "book-open-variant",
-      color: "#4CAF50",
-      backgroundColor: "#E8F5E9",
-    },
-    {
-      id: 2,
-      title: "Oyunlar",
-      value: "8",
-      icon: "gamepad-variant",
-      color: "#2196F3",
-      backgroundColor: "#E3F2FD",
-    },
-    {
-      id: 3,
-      title: "Çizimler",
-      value: "5",
-      icon: "pencil",
-      color: "#FF9800",
-      backgroundColor: "#FFF3E0",
-    },
-  ];
-
-  const achievements = [
-    {
-      id: 1,
-      title: "Hikaye Ustası",
-      value: "3",
-      icon: "book-open-variant",
-      color: "#4CAF50",
-      backgroundColor: "#E8F5E9",
-    },
-    {
-      id: 2,
-      title: "Oyun Şampiyonu",
-      value: "2",
-      icon: "gamepad-variant",
-      color: "#2196F3",
-      backgroundColor: "#E3F2FD",
-    },
-    {
-      id: 3,
-      title: "Çizim Sanatçısı",
-      value: "1",
-      icon: "pencil",
-      color: "#FF9800",
-      backgroundColor: "#FFF3E0",
-    },
-  ];
-
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -149,7 +116,39 @@ export default function ProfileScreen() {
     };
 
     fetchUserData();
+    loadUserStories();
   }, []);
+
+  const loadUserStories = async () => {
+    try {
+      const db = getFirestore();
+      const storiesQuery = query(
+        collection(db, "stories"),
+        where("userId", "==", getAuth().currentUser.uid)
+      );
+
+      const storiesSnapshot = await getDocs(storiesQuery);
+      const storiesList = storiesSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setStories(storiesList);
+      setStats({
+        totalStories: storiesList.length,
+        totalDrawings: storiesList.filter((story) => story.drawing).length,
+        favoriteStories: storiesList.filter((story) => story.isFavorite).length,
+        lastActivity:
+          storiesList.length > 0
+            ? new Date(
+                Math.max(...storiesList.map((s) => s.updatedAt?.toDate() || 0))
+              ).toLocaleDateString("tr-TR")
+            : "Henüz aktivite yok",
+      });
+    } catch (error) {
+      console.error("Hikayeler yüklenirken hata:", error);
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -175,6 +174,13 @@ export default function ProfileScreen() {
     } catch (error) {
       Alert.alert("Hata", error.message);
     }
+  };
+
+  const toggleSetting = (setting) => {
+    setSettings((prev) => ({
+      ...prev,
+      [setting]: !prev[setting],
+    }));
   };
 
   if (loading) {
@@ -204,216 +210,222 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.profileSection}>
-          <View style={styles.profileLeft}>
-            <View style={styles.avatarContainer}>
-              <Image
-                source={{
-                  uri: "https://cdn-icons-png.flaticon.com/512/1995/1995577.png",
-                }}
-                style={styles.avatar}
-              />
-              <TouchableOpacity style={styles.editAvatarButton}>
-                <MaterialCommunityIcons name="camera" size={20} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.profileRight}>
-            <View style={styles.usernameContainer}>
-              <Text style={styles.username}>
-                {userData?.username || "Kullanıcı"}
-              </Text>
-              <TouchableOpacity style={styles.editInfoButton}>
-                <MaterialCommunityIcons name="pencil" size={16} color="#fff" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.credentialsContainer}>
-              <View style={styles.credentialItem}>
-                <MaterialCommunityIcons name="email" size={16} color="#fff" />
-                {isEditing ? (
-                  <TextInput
-                    style={styles.input}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="E-posta"
-                    placeholderTextColor="#E8F5E9"
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
+          <View style={styles.profileSection}>
+            <View style={styles.profileLeft}>
+              <View style={styles.avatarContainer}>
+                <Image
+                  source={{
+                    uri: "https://cdn-icons-png.flaticon.com/512/1995/1995577.png",
+                  }}
+                  style={styles.avatar}
+                />
+                <TouchableOpacity style={styles.editAvatarButton}>
+                  <MaterialCommunityIcons
+                    name="camera"
+                    size={20}
+                    color="#fff"
                   />
-                ) : (
-                  <Text style={styles.credentialText}>{email}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.profileRight}>
+              <View style={styles.usernameContainer}>
+                <Text style={styles.username}>
+                  {userData?.username || "Kullanıcı"}
+                </Text>
+                <TouchableOpacity style={styles.editInfoButton}>
+                  <MaterialCommunityIcons
+                    name="pencil"
+                    size={16}
+                    color="#fff"
+                  />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.credentialsContainer}>
+                <View style={styles.credentialItem}>
+                  <MaterialCommunityIcons name="email" size={16} color="#fff" />
+                  {isEditing ? (
+                    <TextInput
+                      style={styles.input}
+                      value={email}
+                      onChangeText={setEmail}
+                      placeholder="E-posta"
+                      placeholderTextColor="#E8F5E9"
+                    />
+                  ) : (
+                    <Text style={styles.credentialText}>{email}</Text>
+                  )}
+                </View>
+                {isEditing && (
+                  <>
+                    <View style={styles.credentialItem}>
+                      <MaterialCommunityIcons
+                        name="lock"
+                        size={16}
+                        color="#fff"
+                      />
+                      <TextInput
+                        style={styles.input}
+                        value={password}
+                        onChangeText={setPassword}
+                        placeholder="Mevcut Şifre"
+                        placeholderTextColor="#E8F5E9"
+                        secureTextEntry
+                      />
+                    </View>
+                    <View style={styles.credentialItem}>
+                      <MaterialCommunityIcons
+                        name="lock"
+                        size={16}
+                        color="#fff"
+                      />
+                      <TextInput
+                        style={styles.input}
+                        value={newPassword}
+                        onChangeText={setNewPassword}
+                        placeholder="Yeni Şifre"
+                        placeholderTextColor="#E8F5E9"
+                        secureTextEntry
+                      />
+                    </View>
+                  </>
                 )}
               </View>
-              {isEditing && (
-                <>
-                  <View style={styles.credentialItem}>
-                    <MaterialCommunityIcons
-                      name="lock"
-                      size={16}
-                      color="#fff"
-                    />
-                    <TextInput
-                      style={styles.input}
-                      value={password}
-                      onChangeText={setPassword}
-                      placeholder="Mevcut Şifre"
-                      placeholderTextColor="#E8F5E9"
-                      secureTextEntry
-                    />
-                  </View>
-                  <View style={styles.credentialItem}>
-                    <MaterialCommunityIcons
-                      name="lock"
-                      size={16}
-                      color="#fff"
-                    />
-                    <TextInput
-                      style={styles.input}
-                      value={newPassword}
-                      onChangeText={setNewPassword}
-                      placeholder="Yeni Şifre"
-                      placeholderTextColor="#E8F5E9"
-                      secureTextEntry
-                    />
-                  </View>
-                </>
+              {isEditing ? (
+                <View style={styles.editButtons}>
+                  <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={handleUpdate}
+                  >
+                    <Text style={styles.buttonText}>Kaydet</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => {
+                      setIsEditing(false);
+                      setPassword("");
+                      setNewPassword("");
+                    }}
+                  >
+                    <Text style={styles.buttonText}>İptal</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() => setIsEditing(true)}
+                >
+                  <MaterialCommunityIcons
+                    name="pencil"
+                    size={16}
+                    color="#fff"
+                  />
+                  <Text style={styles.editButtonText}>Bilgileri Düzenle</Text>
+                </TouchableOpacity>
               )}
             </View>
-            {isEditing ? (
-              <View style={styles.editButtons}>
-                <TouchableOpacity
-                  style={styles.saveButton}
-                  onPress={handleUpdate}
-                >
-                  <Text style={styles.buttonText}>Kaydet</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => {
-                    setIsEditing(false);
-                    setPassword("");
-                    setNewPassword("");
-                  }}
-                >
-                  <Text style={styles.buttonText}>İptal</Text>
-                </TouchableOpacity>
+          </View>
+
+          <View style={styles.aboutSection}>
+            <Text style={styles.aboutTitle}>Hakkımda</Text>
+            <Text style={styles.aboutText}>
+              Hayal Dünyam'da eğlenceli hikayeler okuyorum ve oyunlar oynuyorum!
+            </Text>
+            <TouchableOpacity style={styles.editAboutButton}>
+              <MaterialCommunityIcons name="pencil" size={16} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>İstatistiklerim</Text>
+            <View style={styles.horizontalScroll}>
+              <View style={[styles.smallCard, { backgroundColor: "#E8F5E9" }]}>
+                <View style={styles.cardContent}>
+                  <MaterialCommunityIcons
+                    name="book"
+                    size={14}
+                    color="#4CAF50"
+                  />
+                  <Text style={[styles.smallCardValue, { color: "#4CAF50" }]}>
+                    {stats.totalStories}
+                  </Text>
+                </View>
+                <Text style={[styles.smallCardTitle, { color: "#4CAF50" }]}>
+                  Hikayeler
+                </Text>
               </View>
-            ) : (
+              <View style={[styles.smallCard, { backgroundColor: "#E3F2FD" }]}>
+                <View style={styles.cardContent}>
+                  <MaterialCommunityIcons
+                    name="draw"
+                    size={14}
+                    color="#2196F3"
+                  />
+                  <Text style={[styles.smallCardValue, { color: "#2196F3" }]}>
+                    {stats.totalDrawings}
+                  </Text>
+                </View>
+                <Text style={[styles.smallCardTitle, { color: "#2196F3" }]}>
+                  Çizimler
+                </Text>
+              </View>
+              <View style={[styles.smallCard, { backgroundColor: "#FFF3E0" }]}>
+                <View style={styles.cardContent}>
+                  <MaterialCommunityIcons
+                    name="star"
+                    size={14}
+                    color="#FF9800"
+                  />
+                  <Text style={[styles.smallCardValue, { color: "#FF9800" }]}>
+                    {stats.favoriteStories}
+                  </Text>
+                </View>
+                <Text style={[styles.smallCardTitle, { color: "#FF9800" }]}>
+                  Favoriler
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.lastActivityText}>
+              Son Aktivite: {stats.lastActivity}
+            </Text>
+          </View>
+
+          <View style={styles.profileItems}>
+            {profileItems.map((item) => (
               <TouchableOpacity
-                style={styles.editButton}
-                onPress={() => setIsEditing(true)}
-              >
-                <MaterialCommunityIcons name="pencil" size={16} color="#fff" />
-                <Text style={styles.editButtonText}>Bilgileri Düzenle</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.aboutSection}>
-          <Text style={styles.aboutTitle}>Hakkımda</Text>
-          <Text style={styles.aboutText}>
-            Hayal Dünyam'da eğlenceli hikayeler okuyorum ve oyunlar oynuyorum!
-          </Text>
-          <TouchableOpacity style={styles.editAboutButton}>
-            <MaterialCommunityIcons name="pencil" size={16} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>İstatistiklerim</Text>
-          <View style={styles.horizontalScroll}>
-            {stats.map((stat) => (
-              <View
-                key={stat.id}
+                key={item.id}
                 style={[
-                  styles.smallCard,
-                  { backgroundColor: stat.backgroundColor },
+                  styles.profileItem,
+                  { backgroundColor: item.backgroundColor },
                 ]}
+                onPress={() => navigation.navigate(item.screen)}
               >
-                <View style={styles.cardContent}>
+                <View style={styles.profileItemContent}>
                   <MaterialCommunityIcons
-                    name={stat.icon}
-                    size={14}
-                    color={stat.color}
+                    name={item.icon}
+                    size={30}
+                    color={item.color}
                   />
-                  <Text style={[styles.smallCardValue, { color: stat.color }]}>
-                    {stat.value}
+                  <Text style={[styles.profileItemText, { color: item.color }]}>
+                    {item.title}
                   </Text>
                 </View>
-                <Text style={[styles.smallCardTitle, { color: stat.color }]}>
-                  {stat.title}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Başarılarım</Text>
-          <View style={styles.horizontalScroll}>
-            {achievements.map((achievement) => (
-              <View
-                key={achievement.id}
-                style={[
-                  styles.smallCard,
-                  { backgroundColor: achievement.backgroundColor },
-                ]}
-              >
-                <View style={styles.cardContent}>
-                  <MaterialCommunityIcons
-                    name={achievement.icon}
-                    size={14}
-                    color={achievement.color}
-                  />
-                  <Text
-                    style={[
-                      styles.smallCardValue,
-                      { color: achievement.color },
-                    ]}
-                  >
-                    {achievement.value}
-                  </Text>
-                </View>
-                <Text
-                  style={[styles.smallCardTitle, { color: achievement.color }]}
-                >
-                  {achievement.title}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.profileItems}>
-          {profileItems.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.profileItem,
-                { backgroundColor: item.backgroundColor },
-              ]}
-              onPress={() => navigation.navigate(item.screen)}
-            >
-              <View style={styles.profileItemContent}>
                 <MaterialCommunityIcons
-                  name={item.icon}
-                  size={30}
+                  name="chevron-right"
+                  size={24}
                   color={item.color}
                 />
-                <Text style={[styles.profileItemText, { color: item.color }]}>
-                  {item.title}
-                </Text>
-              </View>
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={24}
-                color={item.color}
-              />
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-      </View>
+      </ScrollView>
     </LinearGradient>
   );
 }
@@ -645,5 +657,41 @@ const styles = StyleSheet.create({
   loadingText: {
     color: "#fff",
     fontSize: 16,
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    padding: 15,
+    margin: 20,
+    borderRadius: 10,
+  },
+  logoutText: {
+    color: "#fff",
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  settingItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 15,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  settingText: {
+    color: "#fff",
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  lastActivityText: {
+    fontSize: 12,
+    color: "#E8F5E9",
+    marginTop: 8,
+    textAlign: "center",
+  },
+  scrollView: {
+    flex: 1,
   },
 });

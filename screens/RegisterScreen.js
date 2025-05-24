@@ -56,19 +56,18 @@ export default function RegisterScreen() {
         password
       );
 
-      // Firestore'a kullanıcı bilgilerini kaydet
+      // Kullanıcı bilgilerini Firestore'a kaydet
       await setDoc(doc(db, "users", userCredential.user.uid), {
-        username: username,
+        name: username,
         email: email,
-        createdAt: new Date(),
-        profileImage: "",
-        bio: "",
-        dreams: 0,
-        followers: 0,
-        following: 0,
+        createdAt: new Date().toISOString(),
+        favorites: [],
+        readStories: [],
+        storiesCreated: 0,
       });
 
-      navigation.replace("Home");
+      Alert.alert("Başarılı", "Hesabınız oluşturuldu!");
+      navigation.navigate("Login");
     } catch (error) {
       let errorMessage = "Kayıt olurken bir hata oluştu";
       if (error.code === "auth/email-already-in-use") {

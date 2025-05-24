@@ -11,46 +11,164 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, getDocs } from "firebase/firestore";
 
 const { width } = Dimensions.get("window");
 
 // Masallardan seçilen örnek kelimeler
 const WORDS = [
-  { word: "PAMUK", tale: "Pamuk Prenses" },
-  { word: "PRENSES", tale: "Pamuk Prenses" },
-  { word: "KURT", tale: "Kırmızı Başlıklı Kız" },
-  { word: "KULE", tale: "Rapunzel" },
-  { word: "ELMA", tale: "Pamuk Prenses" },
-  { word: "AYNA", tale: "Pamuk Prenses" },
-  { word: "KALP", tale: "Kurbağa Prens" },
-  { word: "TAÇ", tale: "Pamuk Prenses" },
-  { word: "KRAL", tale: "Pamuk Prenses" },
-  { word: "KRALİÇE", tale: "Pamuk Prenses" },
-  { word: "SİHİR", tale: "Pamuk Prenses" },
-  { word: "BÜYÜ", tale: "Pamuk Prenses" },
-  { word: "PERİ", tale: "Uyuyan Güzel" },
-  { word: "DEVR", tale: "Külkedisi" },
-  { word: "ORMAN", tale: "Kırmızı Başlıklı Kız" },
-  { word: "KÖŞK", tale: "Külkedisi" },
-  { word: "KALE", tale: "Rapunzel" },
-  { word: "ZİNDAN", tale: "Rapunzel" },
-  { word: "HAZİNE", tale: "Ali Baba ve Kırk Haramiler" },
-  { word: "MÜCEVHER", tale: "Ali Baba ve Kırk Haramiler" },
-  { word: "KRALİYET", tale: "Pamuk Prenses" },
-  { word: "PRENSESLİK", tale: "Pamuk Prenses" },
-  { word: "BÜYÜCÜLÜK", tale: "Pamuk Prenses" },
-  { word: "KRALİÇELİK", tale: "Pamuk Prenses" },
-  { word: "SİHİRLİLİK", tale: "Pamuk Prenses" },
-  { word: "BÜYÜLÜLÜK", tale: "Pamuk Prenses" },
-  { word: "PERİLİLİK", tale: "Uyuyan Güzel" },
-  { word: "DEVRİLİK", tale: "Külkedisi" },
-  { word: "ORMANLIK", tale: "Kırmızı Başlıklı Kız" },
-  { word: "KÖŞKLÜK", tale: "Külkedisi" },
-  { word: "KALELİK", tale: "Rapunzel" },
-  { word: "ZİNDANLIK", tale: "Rapunzel" },
-  { word: "HAZİNELİK", tale: "Ali Baba ve Kırk Haramiler" },
-  { word: "MÜCEVHERLİK", tale: "Ali Baba ve Kırk Haramiler" },
+  // Macera Hikayesi'nden Kelimeler
+  { word: "KAHRAMAN", tale: "Macera Hikayesi" },
+  { word: "MAĞARA", tale: "Macera Hikayesi" },
+  { word: "CANAVAR", tale: "Macera Hikayesi" },
+  { word: "ANAHTAR", tale: "Macera Hikayesi" },
+  { word: "KÖPRÜ", tale: "Macera Hikayesi" },
+  { word: "ŞEHİR", tale: "Macera Hikayesi" },
+  { word: "OYUN", tale: "Macera Hikayesi" },
+  { word: "MUTLULUK", tale: "Macera Hikayesi" },
+  { word: "CESARET", tale: "Macera Hikayesi" },
+  { word: "ARKADAŞ", tale: "Macera Hikayesi" },
+
+  // Fantastik Hikaye'den Kelimeler
+  { word: "SİHİR", tale: "Fantastik Hikaye" },
+  { word: "BÜYÜCÜ", tale: "Fantastik Hikaye" },
+  { word: "DEĞNEK", tale: "Fantastik Hikaye" },
+  { word: "HAYVAN", tale: "Fantastik Hikaye" },
+  { word: "YETENEK", tale: "Fantastik Hikaye" },
+  { word: "DUYGU", tale: "Fantastik Hikaye" },
+  { word: "RENK", tale: "Fantastik Hikaye" },
+  { word: "HAYAL", tale: "Fantastik Hikaye" },
+  { word: "GÜÇ", tale: "Fantastik Hikaye" },
+  { word: "DÜNYA", tale: "Fantastik Hikaye" },
+
+  // Arkadaşlık Hikayesi'nden Kelimeler
+  { word: "PARK", tale: "Arkadaşlık Hikayesi" },
+  { word: "OKUL", tale: "Arkadaşlık Hikayesi" },
+  { word: "ÖĞRENCİ", tale: "Arkadaşlık Hikayesi" },
+  { word: "KEDİ", tale: "Arkadaşlık Hikayesi" },
+  { word: "YARDIM", tale: "Arkadaşlık Hikayesi" },
+  { word: "ÖDEV", tale: "Arkadaşlık Hikayesi" },
+  { word: "TENEFÜS", tale: "Arkadaşlık Hikayesi" },
+  { word: "MAHALLE", tale: "Arkadaşlık Hikayesi" },
+  { word: "BESLEMEK", tale: "Arkadaşlık Hikayesi" },
+  { word: "ZİYARET", tale: "Arkadaşlık Hikayesi" },
 ];
+
+// Firebase yapılandırması
+const firebaseConfig = {
+  apiKey: "AIzaSyBZd34mxld_RxluU34LrvBBRO8trt3PFXo",
+  authDomain: "hayal-dunyasi.firebaseapp.com",
+  projectId: "hayal-dunyasi",
+  storageBucket: "hayal-dunyasi.firebasestorage.app",
+  messagingSenderId: "875624820974",
+  appId: "1:875624820974:web:471a827e14117b441c83ff",
+  measurementId: "G-4JEQEPKFQ4",
+};
+
+// Firebase'i başlat
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Hikayelerden kelime seçme fonksiyonu
+const extractWordsFromStories = (stories) => {
+  const words = [];
+
+  stories.forEach((story) => {
+    // Hikaye başlığını ekle
+    words.push({
+      word: story.title.toUpperCase(),
+      tale: story.title,
+    });
+
+    // Hikaye içeriğinden anlamlı kelimeleri çıkar
+    const content = story.content;
+    const sentences = content.split(/[.!?]+/);
+
+    sentences.forEach((sentence) => {
+      // Cümleyi kelimelere ayır
+      const sentenceWords = sentence.trim().split(/\s+/);
+
+      // Her cümleden en anlamlı 2-3 kelimeyi seç
+      const meaningfulWords = sentenceWords
+        .filter(
+          (word) =>
+            word.length >= 4 && // En az 4 harfli kelimeler
+            ![
+              "ve",
+              "ile",
+              "için",
+              "bu",
+              "bir",
+              "da",
+              "de",
+              "mi",
+              "mı",
+              "mu",
+              "mü",
+            ].includes(word.toLowerCase()) // Gereksiz kelimeleri filtrele
+        )
+        .slice(0, 3); // Her cümleden en fazla 3 kelime al
+
+      meaningfulWords.forEach((word) => {
+        // Kelimeyi büyük harfe çevir ve özel karakterleri kaldır
+        const cleanWord = word.toUpperCase().replace(/[^A-ZĞÜŞİÖÇ]/g, "");
+        if (cleanWord.length >= 4) {
+          // Temizlenmiş kelime hala 4 harften uzunsa ekle
+          words.push({
+            word: cleanWord,
+            tale: story.title,
+          });
+        }
+      });
+    });
+  });
+
+  return words;
+};
+
+// Kelimeleri zorluk seviyesine göre sıralama fonksiyonu
+const sortWordsByDifficulty = (words) => {
+  return words.sort((a, b) => {
+    // Önce kelime uzunluğuna göre sırala
+    if (a.word.length !== b.word.length) {
+      return a.word.length - b.word.length;
+    }
+
+    // Aynı uzunluktaki kelimeler için özel karakter sayısına göre sırala
+    const specialCharsA = (a.word.match(/[ĞÜŞİÖÇ]/g) || []).length;
+    const specialCharsB = (b.word.match(/[ĞÜŞİÖÇ]/g) || []).length;
+    return specialCharsA - specialCharsB;
+  });
+};
+
+// Türkçe karakterleri koruyarak kelimeyi karıştırma fonksiyonu
+const shuffleTurkishWord = (word) => {
+  // Kelimeyi harflerine ayır
+  const letters = word.split("");
+
+  // Türkçe karakterleri ve normal harfleri ayrı ayrı karıştır
+  const turkishChars = letters.filter((char) => "ĞÜŞİÖÇğüşıöç".includes(char));
+  const normalChars = letters.filter((char) => !"ĞÜŞİÖÇğüşıöç".includes(char));
+
+  // Normal harfleri karıştır
+  for (let i = normalChars.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [normalChars[i], normalChars[j]] = [normalChars[j], normalChars[i]];
+  }
+
+  // Türkçe karakterleri karıştır
+  for (let i = turkishChars.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [turkishChars[i], turkishChars[j]] = [turkishChars[j], turkishChars[i]];
+  }
+
+  // Karıştırılmış harfleri birleştir
+  const shuffledLetters = [...normalChars, ...turkishChars];
+
+  // Son kelimeyi oluştur
+  return shuffledLetters.join("");
+};
 
 const WordPuzzleScreen = () => {
   const [currentWord, setCurrentWord] = useState("");
@@ -60,26 +178,81 @@ const WordPuzzleScreen = () => {
   const [score, setScore] = useState(0);
   const [foundWords, setFoundWords] = useState([]);
   const [attempts, setAttempts] = useState(0);
+  const [availableWords, setAvailableWords] = useState([]);
+  const [currentLevel, setCurrentLevel] = useState(0); // Mevcut zorluk seviyesi
+  const [wordsFoundInLevel, setWordsFoundInLevel] = useState(0); // Seviyede bulunan kelime sayısı
+
+  // Hikayelerden kelimeleri çıkar
+  useEffect(() => {
+    const fetchStories = async () => {
+      try {
+        // Firestore'dan hikayeleri çek
+        const storiesCollection = collection(db, "stories");
+        const storiesSnapshot = await getDocs(storiesCollection);
+        const stories = storiesSnapshot.docs.map((doc) => ({
+          title: doc.data().title,
+          content: doc.data().content,
+        }));
+
+        if (stories.length > 0) {
+          const words = extractWordsFromStories(stories);
+          const sortedWords = sortWordsByDifficulty(words);
+          setAvailableWords(sortedWords);
+          generateNewWord(sortedWords);
+        } else {
+          // Hikaye yoksa varsayılan kelimeleri kullan
+          const sortedWords = sortWordsByDifficulty(WORDS);
+          setAvailableWords(sortedWords);
+          generateNewWord(sortedWords);
+        }
+      } catch (error) {
+        console.error("Hikayeler yüklenirken hata oluştu:", error);
+        // Hata durumunda varsayılan kelimeleri kullan
+        const sortedWords = sortWordsByDifficulty(WORDS);
+        setAvailableWords(sortedWords);
+        generateNewWord(sortedWords);
+      }
+    };
+
+    fetchStories();
+  }, []);
 
   // Rastgele kelime seç ve harfleri karıştır
-  const generateNewWord = () => {
-    const randomWordObj = WORDS[Math.floor(Math.random() * WORDS.length)];
+  const generateNewWord = (words = availableWords) => {
+    if (words.length === 0) return;
+
+    // Mevcut seviyeye uygun kelimeleri filtrele
+    const levelWords = words.filter((word) => {
+      const wordLength = word.word.length;
+      // Seviye 0: 4 harfli kelimeler
+      // Seviye 1: 5 harfli kelimeler
+      // Seviye 2: 6 harfli kelimeler
+      // Seviye 3: 7 harfli kelimeler
+      // Seviye 4: 8+ harfli kelimeler
+      if (currentLevel === 0) return wordLength === 4;
+      if (currentLevel === 1) return wordLength === 5;
+      if (currentLevel === 2) return wordLength === 6;
+      if (currentLevel === 3) return wordLength === 7;
+      return wordLength >= 8;
+    });
+
+    if (levelWords.length === 0) {
+      // Eğer mevcut seviyede kelime kalmadıysa, seviyeyi artır
+      setCurrentLevel((prev) => Math.min(prev + 1, 4));
+      setWordsFoundInLevel(0);
+      return generateNewWord(words);
+    }
+
+    const randomWordObj =
+      levelWords[Math.floor(Math.random() * levelWords.length)];
     setCurrentWord(randomWordObj.word);
     setCurrentTale(randomWordObj.tale);
 
-    // Harfleri karıştır
-    const letters = randomWordObj.word.split("");
-    for (let i = letters.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [letters[i], letters[j]] = [letters[j], letters[i]];
-    }
-    setScrambledLetters(letters);
+    // Kelimeyi Türkçe karakterleri koruyarak karıştır
+    const shuffledWord = shuffleTurkishWord(randomWordObj.word);
+    setScrambledLetters(shuffledWord.split(""));
     setInputLetters([]);
   };
-
-  useEffect(() => {
-    generateNewWord();
-  }, []);
 
   const handleLetterPress = (letter) => {
     if (inputLetters.length >= currentWord.length) return;
@@ -101,6 +274,17 @@ const WordPuzzleScreen = () => {
           ...prev,
           { word: currentWord, score: wordScore, tale: currentTale },
         ]);
+
+        // Seviyede bulunan kelime sayısını artır
+        const newWordsFoundInLevel = wordsFoundInLevel + 1;
+        setWordsFoundInLevel(newWordsFoundInLevel);
+
+        // Her seviyede 3 kelime bulunduğunda bir üst seviyeye geç
+        if (newWordsFoundInLevel >= 3) {
+          setCurrentLevel((prev) => Math.min(prev + 1, 4));
+          setWordsFoundInLevel(0);
+        }
+
         Alert.alert(
           "Tebrikler!",
           `Doğru kelimeyi buldunuz!\nPuan: ${wordScore}`
