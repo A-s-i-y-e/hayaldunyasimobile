@@ -140,9 +140,20 @@
   - Firebase entegrasyonu iyileştirmeleri
   - Hata yönetimi ve veri doğrulama
 
+### 11. Hafta ✅
+
+- Hesap Profili Ekranı geliştirmeleri:
+  - Profil düzenleme özellikleri
+  - Kullanıcı bilgileri yönetimi
+  - Profil fotoğrafı yükleme ve düzenleme
+  - Hesap ayarları
+  - Gizlilik ayarları
+  - Bildirim tercihleri
+  - Kullanıcı istatistikleri
+  - Aktivite geçmişi
+
 ### Yapılacaklar 🚀
 
-- Yapay zeka entegrasyonu
 - Ebeveyn kontrol paneli
 - Test ve optimizasyonlar
 
